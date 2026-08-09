@@ -60,6 +60,20 @@ different part of the skill:
 
 (A `tic-tac-toe/` app was also built and later deleted during testing.)
 
+## Distributable plugin package
+
+[`mobile-app-builder-plugin/`](mobile-app-builder-plugin/) is a separate,
+isolated repo (also excluded from this outer repo — see `.gitignore`)
+packaging the skill as a real installable Claude Code plugin, so other
+people (or you, on another machine) can add it via `/plugin marketplace add`
++ `/plugin install` instead of copying files by hand. See its own README for
+installation and local-testing instructions.
+
+It's a **separate copy** of the skill, adapted to use `${CLAUDE_PLUGIN_ROOT}`
+(the plugin-portable path convention) instead of this workspace's
+project-local skill paths. The two aren't automatically kept in sync — see
+the plugin repo's README for what that means when iterating further.
+
 ## Working in this repo
 
 This repo's own git history is intentionally separate from any ambient

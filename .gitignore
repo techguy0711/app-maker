@@ -5,5 +5,9 @@
 counter/
 camera/
 
+# Same isolation logic applies to the distributable plugin package — its
+# own repo, not tracked here.
+mobile-app-builder-plugin/
+
 .DS_Store
 node_modules/

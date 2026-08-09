@@ -1,0 +1,9 @@
+# Each app built with the mobile-app-builder skill gets its own isolated
+# git repo (see the skill's build-flow.md) — this workspace repo tracks the
+# skill and workspace-level docs only, not the apps themselves. List each
+# app folder here as it's created:
+counter/
+camera/
+
+.DS_Store
+node_modules/

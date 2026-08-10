@@ -1,23 +1,72 @@
-# App Maker
+<div align="center">
 
-A workspace for building mobile apps end-to-end with Claude Code, for
-someone who doesn't write code themselves. The actual capability lives in
-the `mobile-app-builder` skill; this repo is just its home plus the apps
-built with it so far.
+# 📱 App Maker
 
-## The skill
+### Build a real iPhone or Android app just by describing it — no coding required.
 
-[`.claude/skills/mobile-app-builder/`](.claude/skills/mobile-app-builder/SKILL.md)
-takes an app idea from a plain-language conversation to something running
-on the user's own phone to (optionally) a real App Store / Play Store
-release — without the user ever needing to see a terminal, install Xcode or
-Android Studio, or make a technical decision they didn't ask to make.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](plugins/mobile-app-builder/LICENSE)
+[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF)](https://claude.com/claude-code)
 
-It's invoked automatically whenever someone who isn't a programmer asks for
-an app, or with `/mobile-app-builder`.
+</div>
 
-**How it works, briefly** (full detail in the skill's own
-[`build-flow.md`](.claude/skills/mobile-app-builder/references/build-flow.md)):
+---
+
+## Install it
+
+Open [Claude Code](https://claude.com/claude-code), paste these two lines
+in, and press enter:
+
+```
+/plugin marketplace add techguy0711/app-maker
+/plugin install mobile-app-builder@mobile-app-builder-marketplace
+```
+
+That's it. Nothing to download, nothing to configure by hand.
+
+## Then just say what you want
+
+> "I want an app where I can track my daily water intake with a big plus button."
+
+Claude will ask a couple of plain-language questions, build it, and hand you
+a QR code to scan with your phone — the app runs live in a free app called
+**Expo Go** while you're building it, and updates instantly every time you
+ask for a change.
+
+## What it takes care of for you
+
+- ✅ Installing anything your computer needs (it'll ask before anything big)
+- ✅ Getting the app running on your own phone to preview, live
+- ✅ Keeping the app compatible with your phone automatically
+- ✅ Publishing to the Apple App Store / Google Play, when you're ready
+
+The only thing it *can't* do for you: Apple and Google both require a real
+person to sign up for a developer account before your app can go live in
+their stores ($99/year for Apple, $25 once for Google). Everything else —
+including the actual building — Claude handles.
+
+## Before you start
+
+- You'll need [Claude Code](https://claude.com/claude-code) installed.
+- This plugin also uses Expo's official plugin to build screens — install it
+  too, the same way:
+  ```
+  /plugin install expo@claude-plugins-official
+  ```
+
+---
+
+<details>
+<summary><strong>For developers — how this repo is organized</strong></summary>
+
+### The plugin
+
+[`plugins/mobile-app-builder/`](plugins/mobile-app-builder/) is the actual
+plugin, packaged the standard Claude Code way (`.claude-plugin/plugin.json`
++ `skills/`). [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)
+at the repo root is what makes `/plugin marketplace add` work.
+
+**How the skill works, briefly** (full detail in its own
+[`build-flow.md`](plugins/mobile-app-builder/skills/mobile-app-builder/references/build-flow.md)):
 
 1. A short plain-language conversation to understand what the app should do.
 2. `scripts/doctor.sh` checks the machine's dev environment once per session.
@@ -35,49 +84,57 @@ an app, or with `/mobile-app-builder`.
    app — no simulator, no local Xcode/Android Studio required.
 8. Iterate on feedback in plain language.
 9. Shipping to the actual App Store/Play Store goes through EAS Build (cloud
-   compilation, still no local native SDKs) — the one part that genuinely
-   requires the user themselves is signing up for a paid Apple/Google
-   developer account, which no amount of automation can do on their behalf.
+   compilation, still no local native SDKs).
 
 Every one of those steps encodes something that broke in real testing and
-got fixed — see the skill's `troubleshooting.md` for the specifics (SDK
-version mismatches, QR codes that silently never reach the user in a
-terminal session, a git-repo detection bug that nearly staged an unrelated
-directory tree, template shape differences between SDK versions).
+got fixed — see
+[`troubleshooting.md`](plugins/mobile-app-builder/skills/mobile-app-builder/references/troubleshooting.md)
+for the specifics (SDK version mismatches, QR codes that silently never
+reach the user in a terminal session, a git-repo detection bug that nearly
+staged an unrelated directory tree, template shape differences between SDK
+versions).
 
-## Apps in this workspace
+### Testing the plugin locally, without reinstalling
 
-Each app scaffolded by the skill gets its own **isolated git repo** (not
-tracked by this outer repo — see `.gitignore`), so its history stays scoped
-to just that project. Apps built so far, in order, each one testing a
-different part of the skill:
+```
+claude --plugin-dir plugins/mobile-app-builder
+```
 
-- **`counter/`** — plus/minus buttons incrementing a number. First clean
-  run after fixing the SDK-version and git-nesting issues.
+### The `.claude/skills/` copy
+
+There's a second, separate copy of this skill at
+[`.claude/skills/mobile-app-builder/`](.claude/skills/mobile-app-builder/SKILL.md) —
+that's the working copy used to actually build the example apps below and
+develop the skill itself, using this project's own path conventions rather
+than `${CLAUDE_PLUGIN_ROOT}`. The two aren't kept in sync automatically; if
+you change one, mirror the change in the other.
+
+### Example apps built with it
+
+Each app gets its own **isolated git repo** (not tracked by this outer
+repo — see `.gitignore`), so its history stays scoped to just that project.
+
+- **`counter/`** — plus/minus buttons incrementing a number.
 - **`camera/`** — live camera preview, flip front/back, capture and retake
   a photo. Tests a real native module (`expo-camera`) and a runtime
-  permission flow, not just UI state.
+  permission flow.
 
 (A `tic-tac-toe/` app was also built and later deleted during testing.)
 
-## Distributable plugin package
+### Repo hygiene notes
 
-[`mobile-app-builder-plugin/`](mobile-app-builder-plugin/) is a separate,
-isolated repo (also excluded from this outer repo — see `.gitignore`)
-packaging the skill as a real installable Claude Code plugin, so other
-people (or you, on another machine) can add it via `/plugin marketplace add`
-+ `/plugin install` instead of copying files by hand. See its own README for
-installation and local-testing instructions.
+This repo's own git history is intentionally separate from any ambient repo
+that might exist above `~/Documents` on the machine it was developed on —
+see the "near-miss" story in `troubleshooting.md` for why that separation
+matters. Never run git commands here expecting them to reach outside this
+folder, and vice versa.
 
-It's a **separate copy** of the skill, adapted to use `${CLAUDE_PLUGIN_ROOT}`
-(the plugin-portable path convention) instead of this workspace's
-project-local skill paths. The two aren't automatically kept in sync — see
-the plugin repo's README for what that means when iterating further.
+</details>
 
-## Working in this repo
+---
 
-This repo's own git history is intentionally separate from any ambient
-repo that might exist above `~/Documents` — see the "near-miss" story in
-the skill's `troubleshooting.md` for why that separation matters. Never run
-git commands here expecting them to reach outside this folder, and vice
-versa.
+<div align="center">
+
+MIT licensed — see [`plugins/mobile-app-builder/LICENSE`](plugins/mobile-app-builder/LICENSE).
+
+</div>

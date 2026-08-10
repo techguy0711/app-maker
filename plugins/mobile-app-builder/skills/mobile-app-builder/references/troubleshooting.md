@@ -116,6 +116,16 @@ Two options, in order of preference:
    this is a one-time extra build step, still doesn't require Xcode/Android
    Studio locally (EAS builds it in the cloud).
 
+## `npx expo-doctor` flags a missing peer dependency after adding a native module
+
+Confirmed with `expo-audio`: it needs `expo-asset` as a peer dependency that
+`npx expo install expo-audio` does **not** pull in automatically. `tsc
+--noEmit` stays clean and the Expo Go preview keeps working regardless, so
+this is easy to miss until a real (non-Expo-Go) build breaks. Run `npx
+expo-doctor` after installing any new native module, not only `tsc` — it's
+the check built to catch exactly this. Fix is always the same shape: `npx
+expo install <the-missing-peer-it-names>`.
+
 ## `eas build` fails
 
 Read the actual build log Expo links you to — it's usually one of:
@@ -205,6 +215,68 @@ folder at the same moment you're deleting it — not a real lock or
 permission issue. Confirmed in testing: happened right after `npm install`
 finished, twice, and both times the identical `rm -rf` succeeded immediately
 on retry. Just retry once before treating it as a real problem.
+
+## `ui-validate.sh` says `blocked-infra`, or every screen fails at once
+
+Infrastructure, not layout. **Do not redesign anything and do not start the
+three-attempt clock** — the fallback conversation is for real layout limits,
+and using it here would tell a user their design is impossible when actually
+a config file is wrong. Read `.claude/logs/ui-validate.log` and
+`.claude/visual/last-run.json`; failures come back as `kind: "error"` rather
+than `kind: "layout"`, which is the tell.
+
+Common causes, in the order they actually occur:
+
+- **`Flow is not supported` / a parse error inside `node_modules/react-native/Libraries/…`** — the single most likely failure after adding a dependency. Packages that ship React Native *native component specs* (`react-native-safe-area-context`, `-screens`, `-gesture-handler`, `-reanimated`, and most `react-native-*` wrappers) deep-import Flow-typed React Native source. Vite's parser rejects Flow outright, so one such import kills the entire run before a single screen renders. Aliasing bare `react-native` to `react-native-web` does *not* cover it — the import is a deep path, not the bare name. Add the package to the stub aliases in `templates/vitest.config.ts` and give it exports in `templates/expo-stubs.tsx`. Confirmed on a stock SDK 57 scaffold, whose default screen uses safe-area-context. Wrappers whose only job is insets or gesture plumbing should stub as pass-through containers, not placeholder boxes — a placeholder would hide their children from the layout checks, and the children are the part worth checking.
+- **`[PARSE_ERROR] Unexpected JSX expression` inside `node_modules/@expo/vector-icons/build/*.js`** — that package ships untranspiled JSX in its `build/` output, relying on Metro's transformer to handle it; Vite's esbuild/rolldown optimizer chokes on raw JSX in a plain `.js` file and kills the whole run before any screen renders. Confirmed on a real app using `Ionicons` from `@expo/vector-icons` — every screen failed at once. Fix is the same shape as the Flow case above: alias `@expo/vector-icons` to the stubs in `templates/vitest.config.ts` and add icon-set exports (`Ionicons`, `MaterialIcons`, etc.) to `templates/expo-stubs.tsx`, sized to the `size` prop rather than a fixed box so icons don't blow up small inline layouts (chevrons in a row, a glyph inside a round button). Already fixed in the shared templates as of Aug 2026 — if it recurs, a new icon family is being imported that isn't in the stub list yet.
+- **`[MISSING_EXPORT] "X" is not exported by "node_modules/react-native-web/dist/index.js"` (e.g. `TurboModuleRegistry`), traced back to `expo-modules-core/src/requireNativeModule.ts`** — happens with Expo modules that *do* have a real web implementation (confirmed with `expo-audio`, which has a genuine HTML5-audio-backed `.web` build) but whose universal entry point still imports `expo-modules-core`'s native-module bridge unconditionally. That bridge references React Native internals `react-native-web` doesn't export, and Vite's dependency optimizer fails on it during its pre-scan, before platform-specific resolution ever gets a chance to pick the `.web` file. The fix isn't "make the web build work" — it's the same stub-alias pattern as everything else here: add the module to `templates/vitest.config.ts`'s alias list and give it a fake hook/function shape in `templates/expo-stubs.tsx` (for `expo-audio`: no-op `setAudioModeAsync`, and `useAudioPlayer`/`useAudioPlayerStatus` returning static idle state). Already fixed for `expo-audio`; the same signature from a different package means that package needs the same treatment.
+- **`does not provide an export named 'X'`** — a screen imports something
+  from a native-only Expo module that `templates/expo-stubs.tsx` doesn't
+  stand in for yet. ES modules resolve named exports at transform time, so
+  this can't be faked dynamically. Add the export to the template, re-copy
+  it to `.claude/visual/expo-stubs.tsx`, re-run. One-line fix.
+- **Every screen reports `empty-render`** — the phone-sized `Frame` wrapper
+  isn't applying, so `flex: 1` roots collapse to zero height. Regenerate the
+  tests (`ui-validate.sh` does this automatically) rather than hand-editing
+  anything under `.claude/visual/tests/`; those files are overwritten on
+  every run.
+- **Chromium won't launch** — `npx playwright install chromium --only-shell`
+  never completed. Re-run `setup-visual-loop.sh`; its log has the real
+  error. On Linux this is usually missing system libraries, which needs a
+  `sudo npx playwright install-deps` the user has to run. On macOS, which is
+  the common case for this skill, no system packages are required.
+
+If it can't be fixed in a minute or two, set it aside. The app is completely
+unaffected — you've lost a safety net, not a feature. Say nothing to the
+user about it; there is no action for them to take.
+
+## Screenshots fail on a screen you didn't touch
+
+Expected, and the reason the comparison exists — a change on one screen
+broke another. Look at the diff image before touching code.
+
+The exception: if the user *asked* for the change that's showing up in the
+diff, the reference image is just stale. Delete the file under
+`.claude/visual/tests/__screenshots__/` and re-run to seed a fresh one.
+
+Comparisons are only meaningful on the same machine. Font rendering, GPU and
+headless-mode differences make screenshots from a different computer
+inherently mismatched — if the project moves machines, delete
+`__screenshots__/` wholesale and let it reseed rather than debugging a wall
+of failures that mean nothing.
+
+## The layout check passes but the app looks wrong on the phone
+
+Both things can be true, and the check is not wrong. It renders
+react-native-web in Chromium, which verifies structure — nothing off-screen,
+nothing collapsed, nothing unreachable, nothing too small to tap. It cannot
+see platform fonts, safe-area insets, native shadows, keyboard behaviour,
+gestures, or `@expo/ui` native controls (screens using those are skipped
+entirely rather than checked against a placeholder).
+
+So trust the user's eyes over a green check, every time. Fix what they
+describe, then re-run — the check's job is stopping obvious breakage from
+ever reaching them, not replacing them.
 
 ## The user asks "is my app safe / can I lose my work?"
 

@@ -1,5 +1,16 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(curl -s *)",
+      "Bash(npx expo-doctor)",
+      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/.claude/skills/mobile-app-builder/scripts/make-preview-qr.sh\" *)",
+      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/.claude/skills/mobile-app-builder/scripts/check-expo-go-sdk.sh\")",
+      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/.claude/skills/mobile-app-builder/scripts/ui-validate.sh\")",
+      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/.claude/skills/mobile-app-builder/scripts/doctor.sh\")"
+    ]
   }
 }

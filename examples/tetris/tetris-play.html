@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Tetris</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #020617; color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 20px; min-height: 100vh; }
+  h1 { font-size: 24px; letter-spacing: 6px; margin: 4px 0; font-weight: 800; }
+  .stage { display: flex; gap: 18px; align-items: flex-start; }
+  canvas#bd { border: 2px solid #1e293b; border-radius: 6px; background: #0f172a; display: block; }
+  .side { width: 130px; display: flex; flex-direction: column; gap: 12px; }
+  .label { font-size: 11px; letter-spacing: 2px; color: #64748b; margin-bottom: 4px; }
+  canvas#nx { background: #0f172a; border-radius: 8px; display: block; }
+  .metric { background: #0f172a; border-radius: 8px; padding: 8px 12px; }
+  .metric span { display: block; font-size: 12px; color: #94a3b8; }
+  .metric b { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 360px; }
+  button { background: #1e293b; color: #f1f5f9; border: none; border-radius: 12px;
+    padding: 16px 0; font-size: 20px; cursor: pointer; }
+  button:active { transform: scale(0.96); }
+  button.accent { background: #2563eb; }
+  .hint { font-size: 12px; color: #64748b; text-align: center; max-width: 380px; }
+  .wrap { position: relative; }
+  .overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; background: rgba(2,6,23,0.82); border-radius: 6px; }
+  .overlay .t { font-size: 30px; font-weight: 800; }
+  .overlay button { background: #3b82f6; color: #fff; font-size: 16px; padding: 10px 22px; border-radius: 10px; }
+</style>
+</head>
+<body>
+  <h1>TETRIS</h1>
+  <div class="stage">
+    <div class="wrap">
+      <canvas id="bd" width="260" height="520"></canvas>
+      <div class="overlay" id="ov">
+        <div class="t" id="ovt">Paused</div>
+        <button id="rs" style="display:none">Play again</button>
+      </div>
+    </div>
+    <div class="side">
+      <div><div class="label">NEXT</div><canvas id="nx" width="96" height="96"></canvas></div>
+      <div class="metric"><span>Score</span><b id="sc">0</b></div>
+      <div class="metric"><span>Lines</span><b id="ln">0</b></div>
+      <div class="metric"><span>Level</span><b id="lv">0</b></div>
+    </div>
+  </div>
+  <div class="pad">
+    <button id="bL">&#9664;</button>
+    <button id="bRot">&#8635;</button>
+    <button id="bR">&#9654;</button>
+    <button id="bS">&#9660;</button>
+    <button id="bH" class="accent">&#8615;</button>
+    <button id="bP">&#10073;&#10073;</button>
+  </div>
+  <div class="hint">Keys: &larr; &rarr; move &middot; &uarr; rotate &middot; &darr; soft drop &middot; space hard drop &middot; P pause</div>
+<script>
+(function(){
+  const COLS=10,ROWS=20,CELL=26,NC=24;
+  const SHAPES={I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1],[0,0,0]],S:[[0,1,1],[1,1,0],[0,0,0]],Z:[[1,1,0],[0,1,1],[0,0,0]],J:[[1,0,0],[1,1,1],[0,0,0]],L:[[0,0,1],[1,1,1],[0,0,0]]};
+  const COLORS={I:'#38bdf8',O:'#facc15',T:'#a855f7',S:'#22c55e',Z:'#ef4444',J:'#3b82f6',L:'#f97316'};
+  const TYPES=Object.keys(SHAPES),EMPTY='#0f172a',LS=[0,40,100,300,1200];
+  const nb=()=>Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  const rot=m=>{const n=m.length,r=m.map(x=>x.slice());for(let i=0;i<n;i++)for(let j=0;j<n;j++)r[j][n-1-i]=m[i][j];return r;};
+  const spawn=t=>{const m=SHAPES[t].map(x=>x.slice());return{type:t,m,row:0,col:Math.floor((COLS-m[0].length)/2)};};
+  const rnd=()=>spawn(TYPES[Math.floor(Math.random()*TYPES.length)]);
+  const valid=(b,p)=>{for(let i=0;i<p.m.length;i++)for(let j=0;j<p.m[i].length;j++){if(!p.m[i][j])continue;const R=p.row+i,C=p.col+j;if(C<0||C>=COLS||R>=ROWS)return false;if(R>=0&&b[R][C])return false;}return true;};
+  const merge=(b,p)=>{const o=b.map(r=>r.slice());for(let i=0;i<p.m.length;i++)for(let j=0;j<p.m[i].length;j++){if(p.m[i][j]){const R=p.row+i;if(R>=0)o[R][p.col+j]=COLORS[p.type];}}return o;};
+  const clr=b=>{const k=b.filter(r=>r.some(c=>c===null)),n=ROWS-k.length,t=Array.from({length:n},()=>Array(COLS).fill(null));return{b:t.concat(k),n};};
+  const di=l=>Math.max(800-l*70,80);
+  let board=nb(),piece=rnd(),next=rnd(),score=0,lines=0,level=0,over=false,paused=false,acc=0,last=performance.now();
+  const bc=document.getElementById('bd').getContext('2d'),nctx=document.getElementById('nx').getContext('2d');
+  const scE=document.getElementById('sc'),lnE=document.getElementById('ln'),lvE=document.getElementById('lv');
+  const ov=document.getElementById('ov'),ovt=document.getElementById('ovt'),rs=document.getElementById('rs');
+  function lock(){const m=merge(board,piece),c=clr(m);board=c.b;lines+=c.n;score+=LS[c.n]*(level+1);level=Math.floor(lines/10);piece=next;next=rnd();if(!valid(board,piece))over=true;}
+  function step(){const mv={...piece,row:piece.row+1};if(valid(board,mv))piece=mv;else lock();}
+  function soft(){if(over||paused)return;const mv={...piece,row:piece.row+1};if(valid(board,mv)){piece=mv;score+=1;}else lock();}
+  function hard(){if(over||paused)return;let r=piece.row;while(valid(board,{...piece,row:r+1}))r++;score+=(r-piece.row)*2;piece={...piece,row:r};lock();}
+  function moveH(d){if(over||paused)return;const mv={...piece,col:piece.col+d};if(valid(board,mv))piece=mv;}
+  function rotate(){if(over||paused)return;const rp={...piece,m:rot(piece.m)};for(const k of[0,-1,1,-2,2]){const c={...rp,col:rp.col+k};if(valid(board,c)){piece=c;return;}}}
+  function restart(){board=nb();piece=rnd();next=rnd();score=0;lines=0;level=0;over=false;paused=false;acc=0;last=performance.now();}
+  function cell(ctx,x,y,color,s){ctx.fillStyle=color;ctx.fillRect(x*s,y*s,s,s);ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.strokeRect(x*s+0.5,y*s+0.5,s-1,s-1);}
+  function render(){
+    bc.fillStyle=EMPTY;bc.fillRect(0,0,COLS*CELL,ROWS*CELL);
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(board[y][x])cell(bc,x,y,board[y][x],CELL);
+    if(!over)for(let i=0;i<piece.m.length;i++)for(let j=0;j<piece.m[i].length;j++)if(piece.m[i][j]){const R=piece.row+i,C=piece.col+j;if(R>=0)cell(bc,C,R,COLORS[piece.type],CELL);}
+    nctx.clearRect(0,0,96,96);const off=(4-next.m.length)/2;
+    for(let i=0;i<next.m.length;i++)for(let j=0;j<next.m[i].length;j++)if(next.m[i][j])cell(nctx,j+off,i+off,COLORS[next.type],NC);
+    scE.textContent=Math.round(score);lnE.textContent=lines;lvE.textContent=level;
+    if(over){ov.style.display='flex';ovt.textContent='Game Over';rs.style.display='block';}
+    else if(paused){ov.style.display='flex';ovt.textContent='Paused';rs.style.display='none';}
+    else ov.style.display='none';
+  }
+  function loop(t){const dt=t-last;last=t;if(!over&&!paused){acc+=dt;const iv=di(level);while(acc>=iv){acc-=iv;step();}}render();requestAnimationFrame(loop);}
+  document.addEventListener('keydown',e=>{
+    if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key))e.preventDefault();
+    if(over){if(e.key==='Enter')restart();return;}
+    if(e.key==='ArrowLeft')moveH(-1);else if(e.key==='ArrowRight')moveH(1);
+    else if(e.key==='ArrowDown')soft();else if(e.key==='ArrowUp')rotate();
+    else if(e.key===' ')hard();else if(e.key==='p'||e.key==='P')paused=!paused;
+  });
+  document.getElementById('bL').onclick=()=>moveH(-1);
+  document.getElementById('bR').onclick=()=>moveH(1);
+  document.getElementById('bRot').onclick=rotate;
+  document.getElementById('bS').onclick=soft;
+  document.getElementById('bH').onclick=hard;
+  document.getElementById('bP').onclick=()=>{if(!over)paused=!paused;};
+  rs.onclick=restart;
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

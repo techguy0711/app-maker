@@ -1,9 +1,16 @@
-# Each app built with the mobile-app-builder skill gets its own isolated
-# git repo (see the skill's build-flow.md) — this workspace repo tracks the
-# skill and workspace-level docs only, not the apps themselves. List each
-# app folder here as it's created:
-counter/
-camera/
+# Example apps live in examples/ and ARE tracked by this repo, so people can
+# read the source without building them. Their build artifacts are not:
+# each app's own .gitignore (node_modules/, .expo/, dist/, ...) applies to
+# its own subtree, and the catch-alls below back that up.
+#
+# Apps you build for yourself in this workspace are a different case — they
+# get their own isolated git repo (see the skill's build-flow.md) and should
+# be listed here so this repo ignores them.
 
 .DS_Store
 node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+.env*.local

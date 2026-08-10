@@ -111,13 +111,31 @@ you change one, mirror the change in the other.
 
 ### Example apps built with it
 
-Each app gets its own **isolated git repo** (not tracked by this outer
-repo — see `.gitignore`), so its history stays scoped to just that project.
+[`examples/`](examples/) holds apps the skill actually produced, checked in
+here so you can read the source without building anything. Each one is a
+complete Expo project — `cd` into it, `npm install && npx expo start`, and
+scan the QR code with Expo Go.
 
-- **`counter/`** — plus/minus buttons incrementing a number.
-- **`camera/`** — live camera preview, flip front/back, capture and retake
-  a photo. Tests a real native module (`expo-camera`) and a runtime
-  permission flow.
+- **[`examples/counter/`](examples/counter/)** — plus/minus buttons
+  incrementing a number. The smallest end-to-end case.
+- **[`examples/camera/`](examples/camera/)** — live camera preview, flip
+  front/back, capture and retake a photo. Exercises a real native module
+  (`expo-camera`) and a runtime permission flow.
+- **[`examples/tetris/`](examples/tetris/)** — full game: rotation, line
+  clears, scoring, increasing speed. Game rules live in a pure
+  `src/engine.js` with 26 tests (`node test-engine.cjs`) separate from the
+  screen.
+
+Their `node_modules/`, `.expo/` and other build output stay untracked (see
+each app's own `.gitignore` plus the one at the repo root), so a fresh clone
+needs `npm install` in whichever example you want to run.
+
+Note this is a deliberate exception to how the skill treats apps in normal
+use: an app you build for yourself gets its own **isolated git repo** so its
+history stays scoped to that project (see
+[`build-flow.md`](plugins/mobile-app-builder/skills/mobile-app-builder/references/build-flow.md)).
+These three were flattened into this repo's history on purpose so they can
+ship as readable examples.
 
 (A `tic-tac-toe/` app was also built and later deleted during testing.)
 

@@ -126,6 +126,64 @@ expo-doctor` after installing any new native module, not only `tsc` — it's
 the check built to catch exactly this. Fix is always the same shape: `npx
 expo install <the-missing-peer-it-names>`.
 
+## A project path with a space in it breaks a development build
+
+Confirmed to break three separate things in a real Path B build (see
+`build-flow.md`'s Phase 0.5 / Path B) — this does not affect the Expo Go
+path, only local/EAS native builds:
+
+- Two are fixable with a config plugin that re-quotes the generated Xcode
+  build phases (the default scaffold's build phase scripts assume no
+  spaces in `$PROJECT_DIR`).
+- The third is an upstream bug, not something in this project's control:
+  expo-constants' `get-app-config-ios.sh` runs `basename $PROJECT_DIR`
+  unquoted. With a space in the path this silently decides it isn't
+  running inside the Pods project, skips generating `app.config`, and the
+  app crashes at launch with "expo-linking needs access to the
+  expo-constants manifest" — a runtime error with no obvious connection to
+  the real cause. Needs `patch-package` to fix the script directly; there's
+  no config-plugin-level workaround for this one.
+
+`doctor.sh` now warns when the current directory contains a space, but only
+for this reason — it's harmless for Path A. If a user's workspace folder
+has a space in its name (e.g. a `Documents` folder path, or "App Maker"
+style names) and they're headed for a development build, either get the
+project itself into a space-free path, or apply the two fixes above plus
+the `patch-package` patch before the first native build.
+
+## A stale `expo start` from a different project silently hijacks a dev build
+
+A Metro dev server left running on port 8081 (or whatever port) by an
+*unrelated* project causes a freshly installed development build to load
+**that other project's** JS bundle instead of its own — with no error. The
+user just sees a completely different app open. This is confirmed real, not
+theoretical: the port a dev build's native binary connects to is compiled
+into the binary itself, so passing `--port` to the *new* project's `expo
+start` does not fix it — the native app is still configured to look at the
+port where it finds an old server willing to answer.
+
+Before starting a build (Phase 2/3, Path B in particular): check for a
+stale `expo start` already listening —
+```bash
+lsof -i :8081 -sTCP:LISTEN   # or whatever port the new project will use
+```
+If something is there and it isn't this project's own server, **ask the
+user before killing it** — it may be a different project they still have
+open on purpose. Don't silently `kill` a process you didn't start.
+
+## `pod install` fails with "Unicode Normalization not appropriate for ASCII-8BIT"
+
+Happens when `LANG`/`LC_ALL` aren't set in the shell CocoaPods runs in —
+common in a minimal or non-interactive shell environment. Ruby's Unicode
+handling (which CocoaPods' Ruby-based tooling depends on) needs a UTF-8
+locale to process filenames/paths correctly. Fix:
+```bash
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install
+```
+Worth exporting both for the whole session rather than prefixing every
+CocoaPods command individually if more than one `pod` command is coming up
+(e.g. `pod install` then `pod repo update`).
+
 ## `eas build` fails
 
 Read the actual build log Expo links you to — it's usually one of:

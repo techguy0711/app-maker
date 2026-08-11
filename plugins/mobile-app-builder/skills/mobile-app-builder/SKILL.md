@@ -1,7 +1,7 @@
 ---
 name: mobile-app-builder
 description: Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, handling all the developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval — never exposing terminal output, jargon, or setup decisions to the user. Use whenever someone who isn't a programmer asks for an app to be built for them, wants help getting an app onto their phone, or asks about installing Xcode/Android Studio/dev tools for a mobile project. Built on top of the expo:* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client).
-version: 1.5.0
+version: 1.6.0
 license: MIT
 ---
 
@@ -17,7 +17,8 @@ everything else in this skill.
 
 Most of what makes mobile development painful for beginners — installing
 Xcode, installing Android Studio, configuring simulators — is **not actually
-required** to go from an idea to a published app:
+required** to go from an idea to a published app, *when the app's features
+fit inside Expo Go*:
 
 - **Preview**: the user's own phone + the free Expo Go app (scan a QR code).
   No Xcode, no Android Studio, no simulator.
@@ -25,17 +26,33 @@ required** to go from an idea to a published app:
   Xcode or Android Studio needed, even for the final App Store / Play Store
   binary.
 
-So the default path in `references/build-flow.md` never touches
-Xcode/Android Studio at all. Only install them if the user has no phone
-handy, explicitly wants a local simulator, or needs native-module work Expo
-can't cover — and even then, follow the AUTO / ASK FIRST / USER MUST CLICK
-tiers in `references/environment-setup.md` exactly. Don't over-install.
+This is Path A, and it's still the default — most apps fit inside Expo Go,
+and its speed is the point. But some apps genuinely can't: anything needing
+audio/video processing beyond playback, speech recognition, Bluetooth,
+HealthKit, background location, or most other native-module territory needs
+a compiled "development build" instead, which Expo Go structurally cannot
+preview no matter what you do to the project. Phase 0.5 below decides which
+path an app is on, **before** scaffolding — not in Phase 3, after screens
+already exist on the wrong assumption. Only install Xcode/Android Studio
+when Phase 0.5 actually calls for it (or the user has no phone, or
+explicitly wants a local simulator) — and even then, follow the AUTO / ASK
+FIRST / USER MUST CLICK tiers in `references/environment-setup.md` exactly.
+Don't over-install.
 
 ## Phases (full detail in references/build-flow.md)
 
 1. **Understand the idea** — a short plain-language conversation, not a spec form.
-2. **Check the environment** — run `scripts/doctor.sh` once per machine/session.
-3. **Scaffold the project** — run `scripts/check-expo-go-sdk.sh` *first* and
+2. **Does this fit Expo Go?** — decide right after Phase 0 (the conversation
+   above), before touching anything else. Concrete trigger list and
+   cross-checks in `build-flow.md`. This choice determines whether step 5
+   below is the fast QR-code path (Path A, the default) or a
+   development-build path (Path B) that needs different tooling and a
+   different, non-negotiable verification step — get this right early, it's
+   expensive to discover late.
+3. **Check the environment** — run `scripts/doctor.sh` once per machine/session.
+   It reports both the Expo Go path's needs and the dev-build path's needs;
+   read whichever step 2 says applies.
+4. **Scaffold the project** — run `scripts/check-expo-go-sdk.sh` *first* and
    scaffold at the SDK tag it prints (`--template default@sdk-NN`), not
    plain `@latest` — the App Store's Expo Go build regularly lags the newest
    SDK by weeks, and scaffolding ahead of it produces a project that can
@@ -45,24 +62,31 @@ tiers in `references/environment-setup.md` exactly. Don't over-install.
    single-screen stack (verified end-to-end on both known template shapes —
    don't redo this by hand). Then build the real screens out using the
    `expo:*` skills (project structure, router, native UI, data fetching).
-4. **Verify, then let them see it live** — `npx tsc --noEmit` must pass, then
+5. **Verify, then let them see it live** — `npx tsc --noEmit` must pass, then
    `scripts/ui-validate.sh` must pass (see "The validation loop" below);
    never hand a broken bundle *or* a broken layout to a non-technical user.
-   Then start `npx expo start` in the background, build
-   the connection QR yourself with `scripts/make-preview-qr.sh` (Expo CLI's
-   own QR only renders in an interactive terminal, which a background
-   process never has — confirmed by testing, don't wait for it to appear),
-   and print the ASCII QR the script outputs **directly in your reply** —
-   that's the primary, always-works method, not SendUserFile-ing the PNG
-   (confirmed by testing: that silently "succeeds" with no error in a plain
-   terminal session and the user never sees it — no image viewer to show it
-   in). Only attach the PNG as an extra once you already know images render
-   for this session. This is the milestone that matters most — get here
-   fast, and get it right the first time (print it once, cleanly — don't
-   experiment with alternate QR commands in front of the user; the script
-   already avoids the ANSI-color-garbage trap those fall into).
-5. **Iterate** — take feedback in their own words, translate it to code.
-6. **Ship it** — `expo:eas-app-stores` for the cloud build/submit mechanics;
+   **Path A (fits Expo Go, the default):** start `npx expo start` in the
+   background, build the connection QR yourself with
+   `scripts/make-preview-qr.sh` (Expo CLI's own QR only renders in an
+   interactive terminal, which a background process never has — confirmed
+   by testing, don't wait for it to appear), and print the ASCII QR the
+   script outputs **directly in your reply** — that's the primary,
+   always-works method, not SendUserFile-ing the PNG (confirmed by testing:
+   that silently "succeeds" with no error in a plain terminal session and
+   the user never sees it — no image viewer to show it in). Only attach the
+   PNG as an extra once you already know images render for this session.
+   This is the milestone that matters most on Path A — get here fast, and
+   get it right the first time (print it once, cleanly — don't experiment
+   with alternate QR commands in front of the user; the script already
+   avoids the ANSI-color-garbage trap those fall into). **Path B (needs a
+   dev build):** the QR flow does not apply at all — say so plainly up
+   front, then follow `build-flow.md`'s Path B decision tree (Android via
+   EAS cloud build is the cheap route; iOS has no free path). On Path B,
+   actually driving a simulator or emulator yourself before calling the app
+   ready is a required step, not optional — see "Verification is not
+   optional on this path" in `build-flow.md`.
+6. **Iterate** — take feedback in their own words, translate it to code.
+7. **Ship it** — `expo:eas-app-stores` for the cloud build/submit mechanics;
    be upfront that Apple ($99/yr) and Google ($25 one-time) developer
    accounts are the one part only the user can do (identity + payment).
 
@@ -165,7 +189,9 @@ relevant to the phase you're in:
   written so the user only ever hears the plain-language version.
 - `scripts/doctor.sh` — read-only environment report. Never installs
   anything itself; just tells you what's present so you know what (if
-  anything) to act on.
+  anything) to act on. Reports two separate verdicts — what the Expo Go
+  path needs and what a development-build path would need — since Phase
+  0.5 decides which one applies before this even runs.
 - `scripts/check-expo-go-sdk.sh` — read-only check of which SDK the App
   Store/Play Store build of Expo Go currently supports, and the exact
   `create-expo-app` flag to scaffold at it. Run before every fresh scaffold

@@ -13,18 +13,78 @@ Ask in plain language, one or two questions at a time, not a form:
 Don't ask about tech stack, navigation patterns, state management, etc. — that's
 your job to decide, not theirs. See `plain-language.md` for phrasing rules.
 
+## Phase 0.5 — Does this fit Expo Go?
+
+Decide this right after the Phase 0 conversation, before Phase 1 or Phase 2.
+It changes SDK choice, what tooling Phase 1 needs to check for, and — most
+visibly — what "let them see it live" even means in Phase 3. Working this
+out only when you trip over it in Phase 3 is the expensive order: by then
+you've already scaffolded and built every screen on an assumption that just
+turned out wrong.
+
+**The question:** does anything the user described need a native module
+plain Expo Go doesn't ship? Expo Go is a fixed, pre-built binary — it only
+contains whatever native modules Expo bundled into that specific release.
+Anything else needs a custom-compiled binary (a "development build"), which
+changes the entire preview story, not just one step of it.
+
+**Concrete triggers** — if the idea includes any of these, assume a dev
+build is needed until you can show otherwise:
+- Audio or video processing beyond basic playback (recording, trimming,
+  custom encoding/decoding, real-time effects)
+- Speech recognition or other on-device ML/inference
+- Bluetooth
+- HealthKit / health & fitness sensor data
+- Background location
+- Most payment SDKs (native Stripe, in-app purchase libraries beyond what
+  Expo's own modules cover)
+- Anything else that's "a real X integration," where X is a hardware or
+  OS-level capability rather than a UI pattern
+
+**Two fast cross-checks**, once you have candidate package names in mind:
+- Does the package ship an `app.plugin.js` or an `expo-module.config.json`?
+  That's a strong, checkable signal it needs a config plugin / native code —
+  and therefore a dev build — almost every time.
+- `npx expo-doctor` will **not** catch this for you. It checks version
+  compatibility between installed packages, not whether a package can run
+  inside Expo Go at all. A clean `expo-doctor` run says nothing about this
+  question — don't treat it as reassurance here.
+
+If still unsure, check the package's README for the words "Expo Go" or
+"development build" — most Expo-ecosystem packages say explicitly which
+category they're in.
+
+**Outcome of this gate:**
+- **Fits Expo Go** (most apps): proceed exactly as the rest of this doc
+  describes. Phase 1 stays minimal, Phase 3 is the QR-code flow (Path A).
+  Nothing below changes for you.
+- **Needs a dev build**: say so now, in plain language, before scaffolding
+  anything — e.g. "This app needs a couple of features your phone's basic
+  preview app can't handle on its own. I can still get it running on your
+  phone, it just needs one extra setup step first, and I want to walk you
+  through what that involves before we start." Then read Phase 3's Path B
+  section before Phase 1 — it changes what Phase 1 needs to check for.
+
 ## Phase 1 — Check the environment
 
 Run `scripts/doctor.sh`. Do this once per machine/session, not once per app.
+It reports two separate pictures — what the Expo Go path needs and what a
+dev-build path would need — read whichever one Phase 0.5 says applies here.
 
-The default path below only strictly needs Node.js, npm, and git — call out
-anything else missing from Core Tools in `environment-setup.md` and fix it
-before scaffolding.
-
-Do **not** proactively install Xcode, Android Studio, or any simulator at
-this point. Those are Phase 3 concerns, and most users never need them —
+**If Phase 0.5 said Expo Go fits** (the default path): only Node.js, npm,
+and git are strictly needed — call out anything else missing from Core
+Tools in `environment-setup.md` and fix it before scaffolding. Do **not**
+proactively install Xcode, Android Studio, or any simulator at this point.
+Those are Path A's Phase 3 doesn't need them, and most users never do —
 Expo Go on their own phone covers preview, and EAS Build covers the final
 app-store binary, both without any local native SDKs.
+
+**If Phase 0.5 flagged a dev build**, this changes: you already know Phase 3
+will need a drivable target (Path B, below), so it's worth resolving the
+Android/iOS tooling question now instead of discovering it mid-build with
+screens already written. You still don't need to install anything yet — but
+read Path B's decision tree now, so you can tell the user the real cost and
+timeline up front, in this same conversation, rather than after the fact.
 
 ## Phase 2 — Scaffold the project
 
@@ -42,9 +102,28 @@ starting fresh.
 The scripts referenced throughout this file live in this plugin's own
 `scripts/` directory. Reference them via `${CLAUDE_PLUGIN_ROOT}` — an
 environment variable Claude Code sets to this plugin's install location,
-which is available in every shell command you run and doesn't move when you
-`cd` into the new project. Never hardcode an absolute path to the plugin or
-use a path relative to your current working directory instead.
+which is normally available in every shell command you run and doesn't move
+when you `cd` into the new project. Never hardcode an absolute path to the
+plugin, and never use a path relative to your current working directory
+instead.
+
+**Verify it's actually set before relying on it.** `${CLAUDE_PLUGIN_ROOT}`
+is not guaranteed to be present in every shell — confirmed in a real
+session where it was unset, and every subsequent `${CLAUDE_PLUGIN_ROOT}/...`
+command failed with "No such file or directory" until this was caught. One
+cheap check, before the first script call of the session:
+```bash
+if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  echo "CLAUDE_PLUGIN_ROOT is unset — using the fallback below."
+fi
+```
+If it's unset, fall back to the path Claude Code shows as "Base directory
+for this skill" in the message where this skill was invoked — that's the
+same location `${CLAUDE_PLUGIN_ROOT}` would have pointed to (it's how the
+non-plugin, installed-as-a-skill copy of this same doc always does it, and
+that path is always present regardless of whether the plugin env var is).
+Capture that string once, at the start of the session, rather than
+re-deriving it every time a script needs to run.
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/check-expo-go-sdk.sh
@@ -299,6 +378,15 @@ immediately after npm just finished writing it — this is Finder's
 
 ## Phase 3 — Let them see it live
 
+Which path depends on Phase 0.5's answer:
+- **Path A — fits Expo Go** (the common case, below): the QR-code flow.
+  Fast, free, no extra tooling. Unchanged from before, still the default.
+- **Path B — needs a development build** (further down): the QR-code flow
+  does not apply at all — Expo Go physically cannot load an app that uses
+  native modules it wasn't built with. Skip straight to Path B.
+
+### Path A — Expo Go preview (the default)
+
 This is the moment that matters most for a non-technical user: something
 real on their own phone, fast. Two things about *how* you do this are not
 obvious and both cost real debugging time in testing — read both before
@@ -367,6 +455,92 @@ Only reach for a local simulator/emulator (`environment-setup.md`) or the
 Prefer the EAS cloud simulator over a local Xcode/Android Studio install
 when a real phone isn't an option — it needs no local installs at all.
 
+### Path B — development build preview
+
+Say this up front, plainly, before doing anything else in this phase: "The
+quick scan-a-QR-code preview isn't available for this app, because it uses
+a couple of features your phone's basic preview app doesn't include. I'll
+still get a real version running on your phone — it just needs one extra
+build step first, which I'll walk you through." Don't let the user sit
+waiting for a QR code that Path A would have produced by now but this path
+never will — say why immediately, not after they ask.
+
+#### The decision: Android vs iOS
+
+The two platforms are not symmetric here, in cost or in what you can do
+without the user. Lay this out for them before picking a direction:
+
+- **Android is the cheap escape hatch.** `eas build --platform android
+  --profile development` (via `expo:eas-app-stores`) compiles a real,
+  installable APK entirely in Expo's cloud — zero local Android tooling,
+  and no paid account of any kind. Google's $25 Play Console fee is only
+  for *publishing* to the Play Store later; it is not needed to build or
+  install this APK. The user (or you, walking them through it) downloads
+  the APK link EAS gives you and installs it directly on any Android
+  phone — no store, no review, no waiting.
+- **iOS on a physical device has no free path.** A development build via
+  EAS needs an Apple Developer Program membership ($99/yr) to sign it,
+  full stop. Xcode's own free "personal team" 7-day sideloading exists,
+  but it's an Xcode-only feature — it requires full Xcode.app installed
+  locally and the device connected by cable, and expires and needs
+  reinstalling every 7 days. It is not a free alternative to the EAS path;
+  it's a different, heavier path that still ends up needing Xcode.
+- **iOS locally needs full Xcode.app**, which `environment-setup.md`
+  already correctly marks USER MUST CLICK: App Store only, the user's own
+  Apple ID sign-in, 10–40GB, no CLI install path at all. Surface the
+  scheduling consequence of this plainly, especially if it's the only
+  option on the table: if the user is iPhone-only and doesn't have Xcode
+  installed, they are blocked on a multi-hour download that only *they*
+  can start (the App Store sign-in gate). Say so as soon as you know it,
+  so it isn't a surprise sprung in the middle of a build.
+- **The `expo:eas-simulator` skill** (a paid EAS cloud service) is the way
+  to verify iOS behavior without touching local Xcode at all — the
+  practical answer when the user wants iOS checked but has no Mac, no
+  Xcode, or no patience for the App Store download.
+
+**Rule of thumb, and the reason Android is the sensible fallback whenever
+Xcode is off the table:** Android's entire toolchain — command-line SDK,
+emulator, AVD — can be bootstrapped end-to-end by you, the agent, with a
+single ASK FIRST go-ahead (see `environment-setup.md`'s Android section:
+no GUI wizard, no account, no human-only gate anywhere in it). iOS cannot
+be bootstrapped at all — every real iOS path terminates in a step only a
+human can click through (an App Store sign-in, a developer-account
+sign-up). That asymmetry, not just the dollar cost, is why Android is the
+default suggestion whenever the user doesn't already have Xcode sitting
+there installed.
+
+#### Verification is not required for Path A. It is not optional for Path B.
+
+`SKILL.md` says "never hand a broken bundle to a non-technical user." On
+Path A, `tsc` and `ui-validate.sh` mostly cover this, and the user's own
+phone is right there catching anything left over within seconds of a
+reload. Path B quietly breaks that promise if you let it: with no simulator
+or emulator in the loop, you have no way to catch a runtime bug before the
+user does, and *they* become the test harness — exactly what this skill
+exists to prevent.
+
+So on Path B, obtaining some target you can actually drive yourself — a
+local iOS Simulator, the `expo:eas-simulator` cloud simulator, or an
+Android emulator — and tapping through the app's real features on it is a
+required step before you tell the user it's ready, not an optional nicety.
+This is not hypothetical: in one real session, two runtime bugs surfaced
+only this way, and both would otherwise have reached the user as silent,
+unexplained failure —
+
+- A `setAudioModeAsync` option that threw at call time and silently killed
+  the entire recording flow. `tsc --noEmit` and `expo-doctor` both stayed
+  clean; the button just did nothing.
+- A screen that called `player.pause()` inside its unmount cleanup, after
+  the native player object had already been released by the platform —
+  invisible until you actually navigated away from that screen on a real
+  runtime and watched it happen.
+
+Neither is a type error or a dependency mismatch, so neither shows up in
+any check this skill runs before Phase 3. A simulator you can actually
+drive is the only thing standing between a bug like this and the user
+concluding the app — or the whole idea of an AI-built app — just doesn't
+work.
+
 ## Phase 4 — Iterate
 
 Take feedback in the user's own words ("make the button bigger", "I want a
@@ -426,6 +600,11 @@ local Xcode or Android Studio install either — the whole journey from idea
 to a published app can go through without ever touching either.
 
 ## When local Xcode/Android Studio genuinely make sense
+
+Needing a development build (Phase 0.5, Path B above) is *not* by itself a
+reason to install local Xcode or Android Studio — EAS Build covers Android
+dev builds and `expo:eas-simulator` covers iOS verification, both without
+touching either. Only reach for a local install when:
 
 - The user is doing serious native-module work Expo/EAS can't cover.
 - They want an emulator/simulator running with no phone and no internet

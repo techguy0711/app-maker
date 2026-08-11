@@ -18,6 +18,16 @@ echo "Arch: $ARCH"
 if [ "$OS" = "Darwin" ]; then
   sw_vers 2>/dev/null | sed 's/^/  /'
 fi
+case "$(pwd)" in
+  *' '*)
+    echo "[WARN]    Current directory path contains a space."
+    echo "          Fine for the Expo Go path. For a development build (Phase"
+    echo "          0.5 / Path B), a space in the project path is a known"
+    echo "          source of build failures in Xcode/CocoaPods build phases"
+    echo "          and in expo-constants' iOS config script — see"
+    echo "          troubleshooting.md before building from here."
+    ;;
+esac
 hr
 
 echo "=== Core tools (needed for every path) ==="
@@ -133,16 +143,53 @@ else
 fi
 hr
 
-echo "=== Verdict ==="
-echo "The DEFAULT path needs none of the [MISSING] items above except Node.js,"
-echo "npm, and git under 'Core tools': scaffold with npx create-expo-app, run"
-echo "npx expo start, and preview live on a physical phone with the Expo Go app"
-echo "(free, from the App Store / Play Store). No Xcode, no Android Studio,"
-echo "no simulators required — for building OR for the final app-store release"
+echo "=== Verdict: Expo Go path (Phase 0.5 said this app fits Expo Go) ==="
+echo "Needs none of the [MISSING] items above except Node.js, npm, and git"
+echo "under 'Core tools': scaffold with npx create-expo-app, run npx expo"
+echo "start, and preview live on a physical phone with the Expo Go app (free,"
+echo "from the App Store / Play Store). No Xcode, no Android Studio, no"
+echo "simulators required — for building OR for the final app-store release"
 echo "(EAS Build compiles in the cloud)."
 echo ""
-echo "Only chase the other [MISSING] items if the user specifically wants a"
-echo "local on-screen simulator/emulator instead of using their own phone."
+echo "Only chase the other [MISSING] items on this path if the user"
+echo "specifically wants a local on-screen simulator/emulator instead of"
+echo "using their own phone."
+hr
+
+echo "=== Verdict: development-build path (Phase 0.5 said this app needs one) ==="
+echo "This is a different tooling story — read build-flow.md's Path B before"
+echo "acting on any of this. Summary of what each route actually needs:"
+echo ""
+echo "Android (the cheap route):"
+echo "  eas-cli is the only thing required locally, and EAS Build compiles"
+echo "  the development APK in the cloud — no Android Studio, no SDK, no"
+echo "  paid account. Install the APK straight on any Android phone."
+echo ""
+echo "iOS on a physical device:"
+echo "  No free path exists. An Apple Developer Program membership (\$99/yr)"
+echo "  is required to sign a development build, whether built via EAS or"
+echo "  locally with Xcode."
+echo ""
+echo "iOS verification without a paid Apple account or local Xcode:"
+echo "  Use the expo:eas-simulator cloud service (also paid, separately from"
+echo "  the Apple account) instead of installing Xcode."
+echo ""
+echo "iOS locally (full Xcode.app):"
+if have xcodebuild && xcodebuild -version >/dev/null 2>&1; then
+  echo "  [OK] Already installed on this machine — local iOS Simulator is"
+  echo "  available as a drivable verification target for Path B."
+else
+  echo "  [MISSING] This machine has no local iOS Simulator available. Getting"
+  echo "  one requires the full Xcode.app install, which is USER MUST CLICK"
+  echo "  (App Store sign-in, 10-40GB, no CLI path — see environment-setup.md)."
+  echo "  If the user is iPhone-only with no Xcode, that download is a"
+  echo "  scheduling blocker only they can start — say so early, not mid-build."
+fi
+echo ""
+echo "Whichever route is used, Path B requires actually driving a real"
+echo "target (simulator or emulator) yourself before calling the app ready —"
+echo "see 'Verification is not optional on this path' in build-flow.md."
+echo ""
 echo "See references/environment-setup.md for exact, copy-pasteable install"
 echo "commands and which ones can run unattended vs need the user to click"
 echo "something themselves."

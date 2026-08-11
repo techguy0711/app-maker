@@ -57,6 +57,10 @@ Then say: "I've opened the App Store to Xcode's page — click Get/Install, it'l
 ```bash
 brew install cocoapods
 ```
+If `pod install` itself fails with "Unicode Normalization not appropriate
+for ASCII-8BIT," the shell has no `LANG`/`LC_ALL` set (common in a minimal
+or non-interactive shell) — CocoaPods' Ruby tooling needs a UTF-8 locale.
+Fix: `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install` (see `troubleshooting.md`).
 
 ## Android (macOS, Apple Silicon and Intel)
 

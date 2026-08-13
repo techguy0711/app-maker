@@ -28,11 +28,19 @@
 # what this script does.
 #
 # Usage: make-preview-qr.sh <port> [output-png-path]
+#        make-preview-qr.sh <full-url> [output-png-path]
 # Example: make-preview-qr.sh 8081 /tmp/preview-qr.png
+# Example: make-preview-qr.sh "https://u.expo.dev/abc123?channel-name=preview" /tmp/preview-qr.png
+#
+# The second form (a full URL as the first arg, detected by "://") skips LAN
+# IP lookup entirely and QRs the URL as-is — for the EAS Update fallback
+# (see build-flow.md Phase 3, "When the dev server can't reach the phone at
+# all"), where the connect URL comes from Expo's cloud, not this machine's
+# network.
 
 set -euo pipefail
 
-PORT="${1:?Usage: make-preview-qr.sh <port> [output-png-path]}"
+ARG1="${1:?Usage: make-preview-qr.sh <port|full-url> [output-png-path]}"
 OUTPUT="${2:-}"
 
 get_lan_ip() {
@@ -55,15 +63,25 @@ get_lan_ip() {
   echo "$ip"
 }
 
-LAN_IP="$(get_lan_ip)"
-if [ -z "$LAN_IP" ]; then
-  echo "Could not determine this computer's LAN IP address automatically." >&2
-  echo "Check network settings, or fall back to 'npx expo start --tunnel' and" >&2
-  echo "grep its log output for an exp:// or exps:// URL instead." >&2
-  exit 1
-fi
-
-CONNECT_URL="exp://${LAN_IP}:${PORT}"
+case "$ARG1" in
+  *://*)
+    CONNECT_URL="$ARG1"
+    ;;
+  *)
+    PORT="$ARG1"
+    LAN_IP="$(get_lan_ip)"
+    if [ -z "$LAN_IP" ]; then
+      echo "Could not determine this computer's LAN IP address automatically." >&2
+      echo "Check network settings, or fall back to 'npx expo start --tunnel' and" >&2
+      echo "grep its log output for an exp:// or exps:// URL instead. If this" >&2
+      echo "session isn't running on the user's own machine (Claude Code's" >&2
+      echo "mobile app, a remote/cloud session), neither LAN nor tunnel will" >&2
+      echo "work at all — see build-flow.md Phase 3's EAS Update fallback." >&2
+      exit 1
+    fi
+    CONNECT_URL="exp://${LAN_IP}:${PORT}"
+    ;;
+esac
 
 # Cache the qrcode-terminal install so repeat calls (very common — one per
 # preview during iteration) don't reinstall every time.

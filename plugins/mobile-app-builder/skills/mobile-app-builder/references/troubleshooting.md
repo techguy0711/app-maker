@@ -97,6 +97,23 @@ If the script can't determine a LAN IP (rare — unusual network setup), it
 says so explicitly; fall back to `npx expo start --tunnel` and grep its log
 for an `exp://`/`exps://` URL, which tunnel mode does print as a plain line.
 
+## `expo start --tunnel` fails, or this Claude Code session isn't on the user's own network
+
+Reported directly by a user running Claude Code's **mobile app**: the tunnel
+never established because the session's own network layer blocked the proxy
+connection `--tunnel` needs. This is a different failure from "no LAN IP
+found" (below) — it means neither the LAN-IP QR flow nor the `--tunnel`
+fallback can work at all, because the shell running these commands isn't on
+the user's own network in the first place. Any remote/cloud Claude Code
+session is a candidate for this, not just the mobile app specifically.
+
+Don't debug this as a network misconfiguration on the user's end — it isn't
+one. Skip straight to the EAS Update fallback in `build-flow.md`'s "When the
+dev server can't reach the phone at all." That path publishes the JS bundle
+to Expo's cloud instead of hosting it from this machine, so no tunnel or LAN
+reachability is needed. It's newly added and not yet verified end-to-end in
+a real session — read the caveats there before relying on it blindly.
+
 ## "The QR code won't scan" / "Nothing happens on my phone"
 
 Almost always a network mismatch. Check, in order:

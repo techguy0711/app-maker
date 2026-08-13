@@ -489,6 +489,67 @@ Only reach for a local simulator/emulator (`environment-setup.md`) or the
 Prefer the EAS cloud simulator over a local Xcode/Android Studio install
 when a real phone isn't an option — it needs no local installs at all.
 
+### When the dev server can't reach the phone at all
+
+Everything above assumes the commands you're running execute on the user's
+own computer, on the same network their phone can join. That's true for a
+normal local Claude Code CLI session, but not for every way this skill can
+be run — reported directly by a user: Claude Code's **mobile app** session
+couldn't get a working tunnel, because the session's own network layer
+blocked the proxy connection `expo start --tunnel` needs to set up. The
+same reasoning applies to any other setup where the shell you're running
+commands in isn't on the user's own network — a remote/cloud session in
+general, not just the mobile app specifically.
+
+If you know or suspect you're in one of these setups, don't spend time on
+LAN IP or `--tunnel` first — both assume network adjacency to the phone that
+structurally isn't there, and confirming that by trial and error before
+falling back just costs the user a wait for something that was never going
+to work. Signs you're in this situation: `make-preview-qr.sh`'s LAN IP
+lookup comes back empty on what should be a normal machine, or `expo start
+--tunnel` fails to establish with no clear network-misconfiguration cause on
+the user's end.
+
+**The fallback: EAS Update.** Instead of the phone connecting to a server
+this machine hosts, publish the JS bundle to Expo's own cloud and have
+Expo Go load it from there — no locally-hosted server or tunnel involved at
+all:
+
+```bash
+eas login                # one-time; free Expo account, USER MUST CLICK if
+                          # they don't have one yet — see environment-setup.md
+eas update:configure      # one-time per project; links it to EAS and wires
+                          # up expo-updates
+eas update --branch preview --message "preview"
+```
+
+**This path is new and not yet verified end-to-end in a real session** —
+unlike the rest of this file, treat it as a starting point, not a
+tested recipe. Before relying on it:
+- `eas update:configure` may prompt interactively the first time (creating
+  the EAS project record if one doesn't exist yet); if it hangs with no
+  output in a non-interactive shell, that's very likely what's happening —
+  same shape of problem as the git-init prompt in Phase 2, and worth
+  resolving the same way (check whether it needs a value you can supply as
+  a flag instead of an interactive answer).
+- The exact command output for the Expo-Go-openable link — and whether
+  `eas update` prints it as plain text or only through a TTY-gated
+  interactive UI (the same trap `expo start`'s own QR falls into, see
+  above) — needs confirming fresh; check `eas update --help` and pass
+  `--json` if the plain-text form doesn't show it. Once you have the URL,
+  reuse the existing script rather than building a new QR renderer —
+  `make-preview-qr.sh` now accepts a full URL as well as a bare port:
+  ```bash
+  ${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh "<url eas update printed>" /tmp/preview-qr.png
+  ```
+- This does **not** live-reload. Expo Go loads whatever was last published,
+  and typically only re-checks on a fresh app open/foreground — after every
+  code change in Phase 4, you need to re-run `eas update` and tell the user
+  to close and reopen the app, not just wait for it to refresh itself.
+- Confirm the resulting QR/link actually opens the app in Expo Go before
+  telling the user it's ready, same as any other Path B-style verification
+  step — don't hand this to the user on faith the first time it's used.
+
 ### Path B — development build preview
 
 Say this up front, plainly, before doing anything else in this phase: "The

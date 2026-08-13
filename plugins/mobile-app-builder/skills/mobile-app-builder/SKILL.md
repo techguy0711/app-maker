@@ -1,7 +1,7 @@
 ---
 name: mobile-app-builder
 description: Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, handling all the developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval — never exposing terminal output, jargon, or setup decisions to the user. Use whenever someone who isn't a programmer asks for an app to be built for them, wants help getting an app onto their phone, or asks about installing Xcode/Android Studio/dev tools for a mobile project. Built on top of the expo:* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client).
-version: 1.7.0
+version: 1.8.0
 license: MIT
 ---
 
@@ -236,12 +236,15 @@ relevant to the phase you're in:
   native-module stubs that `setup-visual-loop.sh` copies into a project. If
   a screen fails to import a native-only Expo module, add the missing export
   to `templates/expo-stubs.tsx` — that's a stub gap, not a layout bug.
-- `scripts/make-preview-qr.sh <port> [output.png]` — prints a clean ASCII
-  QR code straight to stdout (print this in your reply — it's the primary
-  delivery method, proven reliable in both terminal and GUI sessions) and
-  optionally also writes a PNG as a bonus for known-GUI sessions. Use this
-  every time instead of expecting Expo CLI to print its own QR code — it
-  won't, in a background process — or hand-rolling a `qrcode`/
-  `qrcode-terminal` CLI call yourself, which produces unreadable ANSI
-  garbage unless invoked exactly the way this script does (Phase 3,
-  `troubleshooting.md`).
+- `scripts/make-preview-qr.sh <port|full-url> [output.png]` — prints a clean
+  ASCII QR code straight to stdout (print this in your reply — it's the
+  primary delivery method, proven reliable in both terminal and GUI
+  sessions) and optionally also writes a PNG as a bonus for known-GUI
+  sessions. Use this every time instead of expecting Expo CLI to print its
+  own QR code — it won't, in a background process — or hand-rolling a
+  `qrcode`/`qrcode-terminal` CLI call yourself, which produces unreadable
+  ANSI garbage unless invoked exactly the way this script does (Phase 3,
+  `troubleshooting.md`). Also accepts a full URL (anything containing
+  `://`) instead of a port, skipping LAN IP lookup entirely — for the EAS
+  Update fallback when this session isn't on the user's own network at all
+  (`build-flow.md`, "When the dev server can't reach the phone at all").

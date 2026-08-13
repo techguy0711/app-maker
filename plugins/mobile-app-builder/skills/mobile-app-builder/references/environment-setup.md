@@ -81,7 +81,26 @@ brew install --cask android-commandlinetools
 ```
 This installs to `/opt/homebrew/share/android-commandlinetools`.
 
-**3. Point environment variables at it** — AUTO. Add to the user's shell profile (`~/.zshrc` on modern macOS):
+**3. JDK 17 — AUTO, and required before step 5 will run at all.** The
+command-line tools package above does **not** bundle a JVM, unlike full
+Android Studio.app (which does, for Gradle builds run through its own IDE —
+that's the source of the "Java comes bundled" impression, and it doesn't
+carry over to the command-line-only path this skill defaults to).
+`sdkmanager` is itself a Java program; without a JDK already present it
+fails immediately with "Unable to locate a Java Runtime," not a
+degraded-but-working state. Confirmed by testing: this is a hard prerequisite
+of the recommended path, not a fallback for when a build error specifically
+demands it.
+```bash
+brew install openjdk@17
+{
+  echo "export JAVA_HOME=\"$(brew --prefix openjdk@17)\""
+  echo "export PATH=\"\$JAVA_HOME/bin:\$PATH\""
+} >> ~/.zshrc
+source ~/.zshrc
+```
+
+**4. Point environment variables at it** — AUTO. Add to the user's shell profile (`~/.zshrc` on modern macOS):
 ```bash
 ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
 {
@@ -91,33 +110,46 @@ ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
 source ~/.zshrc
 ```
 
-**4. Accept licenses and install SDK packages** — AUTO once the download size has been confirmed with the user (ASK FIRST for the download itself, since system images run 1–2GB). Pick the image matching the chip:
+**5. Accept licenses and install SDK packages** — AUTO once the download size has been confirmed with the user (ASK FIRST for the download itself, since system images run 1–2GB). Pick the image matching the chip. Install **one package per `sdkmanager` invocation, with a retry**, rather than one command listing them all — confirmed by testing: a connection reset partway through a multi-package download (it happened on the system image) kills the entire batch, including packages queued behind the one that failed, and it fails silently enough that "let it run and check later" loses more than expected:
 ```bash
 ARCH_TAG="arm64-v8a"   # Apple Silicon (M1/M2/M3/M4). Use "x86_64" on Intel Macs.
 API_LEVEL="35"          # keep in sync with the Expo SDK's target — check `npx expo install --check` output, or use the latest stable
 
 yes | sdkmanager --licenses
-sdkmanager "platform-tools" "platforms;android-$API_LEVEL" \
-  "system-images;android-$API_LEVEL;google_apis;$ARCH_TAG" "emulator"
+
+install_pkg() {
+  for attempt in 1 2 3; do
+    sdkmanager "$1" && return 0
+    echo "sdkmanager failed on '$1' (attempt $attempt/3), retrying..." >&2
+  done
+  echo "sdkmanager could not install '$1' after 3 attempts." >&2
+  return 1
+}
+install_pkg "platform-tools"
+install_pkg "platforms;android-$API_LEVEL"
+install_pkg "system-images;android-$API_LEVEL;google_apis;$ARCH_TAG"
+install_pkg "emulator"
 ```
 
-**5. Create the virtual phone (AVD)** — AUTO.
+**6. Create the virtual phone (AVD)** — AUTO.
 ```bash
 avdmanager create avd -n Pixel_8 \
   -k "system-images;android-$API_LEVEL;google_apis;$ARCH_TAG" -d pixel_8
 ```
+This routinely prints what looks like a scary error about `devices.xml`
+(something like a stack trace mentioning a missing or malformed
+`devices.xml`). Confirmed by testing: it still applies the device profile
+correctly and the AVD is created and bootable — this is noise, not a failed
+step. Don't stop and troubleshoot it; check the next step (booting it) to
+confirm before assuming anything went wrong.
 
-**6. Boot it** — AUTO.
+**7. Boot it** — AUTO.
 ```bash
 emulator -avd Pixel_8
 ```
 A real emulator window opens on screen — friendlier for a non-technical user
 than a terminal-only flow, and this whole sequence never required them to
 click through an install wizard.
-
-**Java** — do not install separately. Android Studio and the command-line
-tools both bundle a working JVM; only reach for a standalone JDK
-(`brew install openjdk@17`) if a build error specifically demands it.
 
 ## Windows / Linux notes
 

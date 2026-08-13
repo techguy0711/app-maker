@@ -30,6 +30,10 @@ changes the entire preview story, not just one step of it.
 
 **Concrete triggers** — if the idea includes any of these, assume a dev
 build is needed until you can show otherwise:
+- Home screen widgets, Live Activities, or an App Clip — a common, ordinary
+  request that's easy to mistake for "just another screen." These are
+  separate native targets Expo Go structurally cannot preview no matter what
+  you do to the project, not a feature gap that a config tweak works around.
 - Audio or video processing beyond basic playback (recording, trimming,
   custom encoding/decoding, real-time effects)
 - Speech recognition or other on-device ML/inference
@@ -88,16 +92,32 @@ timeline up front, in this same conversation, rather than after the fact.
 
 ## Phase 2 — Scaffold the project
 
-**First, always run `scripts/check-expo-go-sdk.sh`.** `npx create-expo-app@latest`
-by itself always grabs the newest SDK, but the Expo Go app published on the
-App Store/Play Store lags behind — sometimes by weeks, while Apple/Google
-review the new build. Scaffolding at a newer SDK than the store's Expo Go
-supports produces a project that cannot open on the user's phone no matter
-how much they update the app, and it shows up as "Project is incompatible
-with this version of Expo Go." Checking first avoids the whole failure class
-instead of debugging it after the fact. See `troubleshooting.md` for the
-full story if you're fixing an already-scaffolded project instead of
-starting fresh.
+**This step branches on Phase 0.5's answer — don't run it the same way for
+both paths.**
+
+**Path A (fits Expo Go):** first, always run `scripts/check-expo-go-sdk.sh`.
+`npx create-expo-app@latest` by itself always grabs the newest SDK, but the
+Expo Go app published on the App Store/Play Store lags behind — sometimes by
+weeks, while Apple/Google review the new build. Scaffolding at a newer SDK
+than the store's Expo Go supports produces a project that cannot open on the
+user's phone no matter how much they update the app, and it shows up as
+"Project is incompatible with this version of Expo Go." Checking first
+avoids the whole failure class instead of debugging it after the fact. See
+`troubleshooting.md` for the full story if you're fixing an
+already-scaffolded project instead of starting fresh.
+
+**Path B (needs a dev build): skip `check-expo-go-sdk.sh` entirely.** It
+answers "what SDK does the store's Expo Go support," and on this path that
+question is irrelevant — nothing here will ever run inside Expo Go. Scaffold
+at the newest SDK (`npx create-expo-app@latest` with no version tag) unless
+the specific native package the app needs documents a minimum SDK of its
+own, in which case scaffold at that version instead. **Do not follow the
+Path A check's output on this path even if you already have it in front of
+you** — this is a real, tested failure mode, not a hypothetical: a project
+built around Expo's own `expo-widgets` package needed SDK 57 because that's
+what the package required, but the store's Expo Go was still lagging on SDK
+54 at the time. Scaffolding at the SDK the check printed would have locked
+the project out of the very package it was built to use.
 
 The scripts referenced throughout this file live in this plugin's own
 `scripts/` directory. Reference them via `${CLAUDE_PLUGIN_ROOT}` — an
@@ -126,6 +146,7 @@ Capture that string once, at the start of the session, rather than
 re-deriving it every time a script needs to run.
 
 ```bash
+# Path A only:
 ${CLAUDE_PLUGIN_ROOT}/scripts/check-expo-go-sdk.sh
 # prints the store-compatible SDK, e.g. "sdk-54"
 
@@ -133,8 +154,15 @@ npx create-expo-app@latest <app-name> --template default@sdk-54   # use the tag 
 cd <app-name>
 ```
 
-Do not scaffold with `--template default` (no version tag) — that always
-resolves to the newest SDK regardless of what the script reported.
+Do not scaffold with `--template default` (no version tag) on Path A — that
+always resolves to the newest SDK regardless of what the script reported.
+
+```bash
+# Path B only — no check-expo-go-sdk.sh, no version tag unless the native
+# package you need documents a minimum:
+npx create-expo-app@latest <app-name>
+cd <app-name>
+```
 
 **Give the project its own isolated git repo, every time.** `create-expo-app`
 detects if it's running inside an existing git repository and, when it is,
@@ -206,10 +234,16 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/strip-demo-scaffold.sh --name "Display Name"
 It recognizes the two template shapes seen and tested so far (`app/(tabs)/`
 — SDK ~54 — and `src/app/` + `app-tabs.tsx` — SDK ~57), grep-verifies
 nothing outside the files it's about to touch references what it's deleting,
-removes the demo tabs/explore/modal/components, rewrites `_layout.tsx` to a
-plain single-screen stack, writes a placeholder `index.tsx`, and sets the
-app's display name in `app.json` — all verified end-to-end against real
-scaffolds of both shapes (`tsc --noEmit` and `expo-doctor` clean afterward).
+removes the demo tabs/explore/modal/components (on SDK ~57, this includes
+`animated-icon.*` — Expo's own logo rendered as an animated splash overlay,
+which has no business surviving into a real app and was found still present
+after a run of this script, before that case was added), rewrites
+`_layout.tsx` to a plain single-screen stack, writes a placeholder
+`index.tsx`, and sets the app's display name in `app.json` — verified
+end-to-end against real scaffolds of both shapes (`tsc --noEmit` and
+`expo-doctor` clean afterward). Run both checks again after this script on
+any project, same as after any other scaffold step — don't assume clean
+just because a prior run was.
 
 If it aborts because it doesn't recognize the template's layout (a future
 SDK shipped a third shape), it changes nothing — fall back to the manual
@@ -464,6 +498,27 @@ still get a real version running on your phone — it just needs one extra
 build step first, which I'll walk you through." Don't let the user sit
 waiting for a QR code that Path A would have produced by now but this path
 never will — say why immediately, not after they ask.
+
+#### Install expo-dev-client — this is what makes it a dev build at all
+
+Use the `expo:expo-dev-client` skill now, before scaffolding any further or
+kicking off a build. Installing the `expo-dev-client` package
+(`npx expo install expo-dev-client`) and letting that skill walk through its
+config is the actual step that turns a plain Expo project into one that can
+produce a development build — everything else in this section (EAS profiles,
+`eas build`, simulators) is mechanics layered on top of that. Skipping it and
+going straight to `eas build --profile development` is not a shortcut; the
+build config that profile expects assumes the package and its config plugin
+are already present.
+
+One sharp edge worth knowing before it costs a debugging cycle: **`expo run:ios
+--port X` / `expo run:android --port X` only takes effect if expo-dev-client
+is installed.** The port a dev build connects to arrives via a deep link
+baked into the client at build/launch time — without expo-dev-client, there's
+no deep-link mechanism to carry it, so the flag is silently accepted and does
+nothing. This compounds with the stale-server problem below: passing `--port`
+looks like it should fix a port collision, and on this path it won't, with no
+error telling you why.
 
 #### The decision: Android vs iOS
 

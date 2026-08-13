@@ -4,8 +4,14 @@
 
 ### Build a real iPhone or Android app just by describing it — no coding required.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](plugins/mobile-app-builder/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF)](https://claude.com/claude-code)
+
+<br>
+
+<img src="examples/blocktoss/screenshot.png" width="280" alt="BlockToss, a physics game built entirely by describing it in plain language to Claude" />
+
+<sub>One of five real apps in <a href="examples/">examples/</a> — every one built end-to-end from a plain-language description, no code written by hand.</sub>
 
 </div>
 
@@ -100,41 +106,23 @@ versions).
 claude --plugin-dir plugins/mobile-app-builder
 ```
 
-### The `.claude/skills/` copy
-
-There's a second, separate copy of this skill at
-[`.claude/skills/mobile-app-builder/`](.claude/skills/mobile-app-builder/SKILL.md) —
-that's the working copy used to actually build the example apps below and
-develop the skill itself, using this project's own path conventions rather
-than `${CLAUDE_PLUGIN_ROOT}`. The two aren't kept in sync automatically; if
-you change one, mirror the change in the other.
+This is also how the example apps below get built and how the skill itself
+gets developed — `plugins/mobile-app-builder/` is the single copy of this
+skill; there's no separate working copy to keep in sync.
 
 ### Example apps built with it
 
-[`examples/`](examples/) holds apps the skill actually produced, checked in
-here so you can read the source without building anything. Each one is a
-complete Expo project — `cd` into it, `npm install && npx expo start`, and
-scan the QR code with Expo Go.
-
-- **[`examples/counter/`](examples/counter/)** — plus/minus buttons
-  incrementing a number. The smallest end-to-end case.
-- **[`examples/camera/`](examples/camera/)** — live camera preview, flip
-  front/back, capture and retake a photo. Exercises a real native module
-  (`expo-camera`) and a runtime permission flow.
-- **[`examples/tetris/`](examples/tetris/)** — full game: rotation, line
-  clears, scoring, increasing speed. Game rules live in a pure
-  `src/engine.js` with 26 tests (`node test-engine.cjs`) separate from the
-  screen.
-
-Their `node_modules/`, `.expo/` and other build output stay untracked (see
-each app's own `.gitignore` plus the one at the repo root), so a fresh clone
-needs `npm install` in whichever example you want to run.
+[`examples/`](examples/) holds five apps the skill actually produced,
+checked in so you can read the source without building anything — see
+[`examples/README.md`](examples/README.md) for the full list (a counter, a
+camera app, a Tetris clone, a physics game, and an Apple Music charts
+browser) and how to run them.
 
 Note this is a deliberate exception to how the skill treats apps in normal
 use: an app you build for yourself gets its own **isolated git repo** so its
 history stays scoped to that project (see
 [`build-flow.md`](plugins/mobile-app-builder/skills/mobile-app-builder/references/build-flow.md)).
-These three were flattened into this repo's history on purpose so they can
+These five were flattened into this repo's history on purpose so they can
 ship as readable examples.
 
 (A `tic-tac-toe/` app was also built and later deleted during testing.)
@@ -153,6 +141,6 @@ folder, and vice versa.
 
 <div align="center">
 
-MIT licensed — see [`plugins/mobile-app-builder/LICENSE`](plugins/mobile-app-builder/LICENSE).
+MIT licensed — see [`LICENSE`](LICENSE).
 
 </div>

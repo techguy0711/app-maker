@@ -1,11 +1,14 @@
 {
   "name": "mobile-app-builder",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, with all developer-tooling setup handled automatically.",
   "author": {
     "name": "Kristhian De Oliveira",
-    "email": "kristhian.deoliveira@gmail.com"
+    "email": "kristhian.deoliveira@gmail.com",
+    "url": "https://github.com/techguy0711"
   },
+  "homepage": "https://github.com/techguy0711/app-maker",
+  "repository": "https://github.com/techguy0711/app-maker",
   "license": "MIT",
-  "keywords": ["expo", "react-native", "mobile", "ios", "android", "non-technical", "app-builder"]
+  "keywords": ["expo", "react-native", "mobile", "ios", "android", "non-technical", "app-builder", "no-code", "claude-code"]
 }

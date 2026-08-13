@@ -173,6 +173,14 @@ If something is there and it isn't this project's own server, **ask the
 user before killing it** — it may be a different project they still have
 open on purpose. Don't silently `kill` a process you didn't start.
 
+Don't reach for `expo run:ios --port X` / `expo run:android --port X` as the
+fix, either — that flag only works if `expo-dev-client` is installed in the
+project (see `build-flow.md`'s Path B). The port arrives via a deep link
+baked into the dev client binary itself, so without that package the flag is
+silently accepted and does nothing, and the app keeps connecting to whatever
+old server it was last configured for. Free the port or ask before killing
+the other process instead of trusting `--port` to route around it.
+
 ## `pod install` fails with "Unicode Normalization not appropriate for ASCII-8BIT"
 
 Happens when `LANG`/`LC_ALL` aren't set in the shell CocoaPods runs in —

@@ -138,15 +138,22 @@ const styles = StyleSheet.create({
 EOF
 
 elif [ "$PROFILE" = "native-tabs" ]; then
+  # animated-icon.* renders Expo's own logo as an animated splash overlay —
+  # confirmed present in a real SDK 57 scaffold after this script ran, and it
+  # has no business surviving into a user's actual app. Delete it along with
+  # the rest of the demo content, not just the tabs.
   DELETE_FILES=(
     "src/app/explore.tsx"
     "src/components/app-tabs.tsx" "src/components/app-tabs.web.tsx"
     "src/components/hint-row.tsx" "src/components/web-badge.tsx"
     "src/components/external-link.tsx" "src/components/ui/collapsible.tsx"
+    "src/components/animated-icon.tsx" "src/components/animated-icon.web.tsx"
+    "src/components/animated-icon.module.css"
   )
   OVERWRITE_FILES=("src/app/_layout.tsx" "src/app/index.tsx")
   for pat in "app-tabs" "AppTabs" "hint-row" "HintRow" "web-badge" "WebBadge" \
-             "external-link" "ExternalLink" "collapsible" "Collapsible"; do
+             "external-link" "ExternalLink" "collapsible" "Collapsible" \
+             "animated-icon" "AnimatedSplashOverlay" "AnimatedIcon"; do
     grep_check "$pat" src
   done
 
@@ -156,17 +163,20 @@ elif [ "$PROFILE" = "native-tabs" ]; then
   cat > src/app/_layout.tsx <<'EOF'
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }} />
     </ThemeProvider>
   );

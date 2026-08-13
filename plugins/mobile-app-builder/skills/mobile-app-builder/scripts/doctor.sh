@@ -138,8 +138,11 @@ if have java && java -version >/dev/null 2>&1; then
   echo "[OK]      Java $(java -version 2>&1 | head -1)"
 else
   echo "[MISSING] Java (macOS ships a stub at /usr/bin/java that fails until a JDK is"
-  echo "          installed — it's bundled with Android Studio; only needed for local"
-  echo "          Android builds, not for EAS cloud builds)"
+  echo "          installed. Only needed for local Android builds, not EAS cloud"
+  echo "          builds — but if the command-line SDK tools path is in use (the"
+  echo "          default, no Android Studio.app), this is a hard prerequisite, not"
+  echo "          optional: sdkmanager is itself a Java program and won't run at all"
+  echo "          without a JDK. See environment-setup.md's Android section, step 3.)"
 fi
 hr
 
@@ -164,6 +167,9 @@ echo "Android (the cheap route):"
 echo "  eas-cli is the only thing required locally, and EAS Build compiles"
 echo "  the development APK in the cloud — no Android Studio, no SDK, no"
 echo "  paid account. Install the APK straight on any Android phone."
+echo "  The expo-dev-client package still needs to be installed IN THE"
+echo "  PROJECT first (via the expo:expo-dev-client skill) — that's what"
+echo "  makes it a dev build at all, not just the EAS profile."
 echo ""
 echo "iOS on a physical device:"
 echo "  No free path exists. An Apple Developer Program membership (\$99/yr)"

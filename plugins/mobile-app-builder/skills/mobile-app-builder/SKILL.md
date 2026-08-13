@@ -1,7 +1,7 @@
 ---
 name: mobile-app-builder
 description: Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, handling all the developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval — never exposing terminal output, jargon, or setup decisions to the user. Use whenever someone who isn't a programmer asks for an app to be built for them, wants help getting an app onto their phone, or asks about installing Xcode/Android Studio/dev tools for a mobile project. Built on top of the expo:* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client).
-version: 1.6.0
+version: 1.7.0
 license: MIT
 ---
 
@@ -52,11 +52,18 @@ Don't over-install.
 3. **Check the environment** — run `scripts/doctor.sh` once per machine/session.
    It reports both the Expo Go path's needs and the dev-build path's needs;
    read whichever step 2 says applies.
-4. **Scaffold the project** — run `scripts/check-expo-go-sdk.sh` *first* and
-   scaffold at the SDK tag it prints (`--template default@sdk-NN`), not
-   plain `@latest` — the App Store's Expo Go build regularly lags the newest
-   SDK by weeks, and scaffolding ahead of it produces a project that can
-   never open on the user's phone (see `troubleshooting.md`). Then run
+4. **Scaffold the project** — this branches on step 2's answer. **Path A:**
+   run `scripts/check-expo-go-sdk.sh` *first* and scaffold at the SDK tag it
+   prints (`--template default@sdk-NN`), not plain `@latest` — the App
+   Store's Expo Go build regularly lags the newest SDK by weeks, and
+   scaffolding ahead of it produces a project that can never open on the
+   user's phone (see `troubleshooting.md`). **Path B:** skip that check
+   entirely — Expo Go compatibility is irrelevant to a dev build — and
+   scaffold at latest (or whatever SDK the native package you need actually
+   requires). Following Path A's check on Path B is a real, tested mistake:
+   it can lock the project below the SDK a required native package needs
+   (confirmed with `expo-widgets`, which required SDK 57 while the check was
+   still reporting the store's SDK 54). Then run
    `scripts/strip-demo-scaffold.sh --name "Display Name"` to remove the
    template's demo tabs/explore/modal content and drop to a clean
    single-screen stack (verified end-to-end on both known template shapes —

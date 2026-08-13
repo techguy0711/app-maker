@@ -7,12 +7,6 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF)](https://claude.com/claude-code)
 
-<br>
-
-<img src="examples/blocktoss/screenshot.png" width="280" alt="BlockToss, a physics game built entirely by describing it in plain language to Claude" />
-
-<sub>One of five real apps in <a href="examples/">examples/</a> — every one built end-to-end from a plain-language description, no code written by hand.</sub>
-
 </div>
 
 ---

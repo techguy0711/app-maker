@@ -2,13 +2,20 @@
 /**
  * app-map.mjs — build a queryable map of an Expo/React Native project.
  *
- * Writes .claude/app-map.json: screens (expo-router routes), components,
- * the import/used-by graph, every StyleSheet rule, and a `risky` list of
- * layout patterns that historically break on device.
+ * Writes two files:
+ *   .claude/app-map.md    an annotated tree — routes, imports, style names,
+ *                         risky patterns, constraints. THE ONE TO READ.
+ *   .claude/app-map.json  the same map plus every resolved StyleSheet value
+ *                         and the full import/used-by graph. For lookups.
  *
  * Purpose: let the agent answer "what screens exist / what uses this /
  * where is this style defined / what did I already try" from ONE file
  * instead of grepping the tree. Read-only. Never modifies source.
+ *
+ * The split exists because the JSON is read before every layout edit and the
+ * resolved style values dominate it — roughly 6× the digest's tokens on a
+ * two-screen app, and the gap widens with every screen. Scripts consume the
+ * JSON; the agent should be reading the digest.
  *
  * Uses the project's own `typescript` dependency (every Expo TS template
  * ships one) — adds no dependency of its own. If typescript can't be
@@ -318,5 +325,116 @@ const out = {
 const outDir = path.join(projectDir, '.claude');
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'app-map.json'), JSON.stringify(out, null, 2));
+
+// --- the digest: app-map.md -------------------------------------------------
+// WHY THIS EXISTS: app-map.json is read before every layout edit, and it is
+// dominated by resolved StyleSheet values — on a two-screen example app it is
+// already ~4.4k tokens, and it grows with every screen. Almost every read only
+// needs "what exists, what's a route, what's shared, what already failed."
+// This file answers exactly that in roughly a tenth of the tokens; the JSON
+// stays for the times you need a specific value or the full graph.
+//
+// Anything truncated here is marked, and marked truncation is the point: it
+// tells you when to open the JSON instead of guessing that you have it all.
+const uses = {};
+for (const [target, froms] of Object.entries(usedBy)) {
+  for (const from of froms) (uses[from] ||= []).push(target);
+}
+
+const baseName = f => path.basename(f).replace(/\.(tsx|ts|jsx|js)$/, '');
+const routeOf = new Map(screens.map(s => [s.file, s.route]));
+const compName = e => {
+  const def = (e.exports || []).find(x => x.startsWith('default ('));
+  return def ? def.slice(9, -1) : (e.exports || [])[0] || '';
+};
+
+// Group every mapped file under its directory, so the shape of the project is
+// visible without a single directory listing.
+const byDir = new Map();
+for (const e of [...screens, ...components]) {
+  const dir = path.dirname(e.file) === '.' ? '(root)' : path.dirname(e.file) + '/';
+  if (!byDir.has(dir)) byDir.set(dir, []);
+  byDir.get(dir).push(e);
+}
+
+const stylesByFile = new Map();
+for (const s of styles) {
+  if (!stylesByFile.has(s.file)) stylesByFile.set(s.file, []);
+  stylesByFile.get(s.file).push(s.name);
+}
+
+const L = [];
+L.push(`# App map — ${path.basename(projectDir)}`);
+L.push('');
+L.push(`${out.counts.screens} screens · ${out.counts.components} components · ` +
+  `${out.counts.styles} styles · ${out.counts.risky} risky · ${out.counts.constraints} constraints`);
+L.push('');
+L.push('## Tree');
+L.push('');
+L.push('```');
+for (const dir of [...byDir.keys()].sort()) {
+  L.push(dir);
+  for (const e of byDir.get(dir).sort((a, b) => a.file.localeCompare(b.file))) {
+    const route = routeOf.get(e.file);
+    const usedByN = (usedBy[e.file] || []).length;
+    const localUses = (uses[e.file] || []).map(baseName);
+    const shown = localUses.slice(0, 6).join(', ');
+    const more = localUses.length > 6 ? ` +${localUses.length - 6}` : '';
+
+    let line = '  ' + path.basename(e.file).padEnd(26);
+    line += (route ? `→ ${route}` : '').padEnd(16);
+    line += compName(e).padEnd(20);
+    // Fixed-width, so the `uses:` column lines up whether or not a file has
+    // importers. Trailing padding is stripped below.
+    line += (usedByN ? `←${usedByN}` : '').padEnd(5);
+    if (localUses.length) line += ` uses: ${shown}${more}`;
+    if (e.usesExpoUi) line += '  [@expo/ui — skipped by ui-validate]';
+    L.push(line.replace(/\s+$/, ''));
+  }
+}
+L.push('```');
+L.push('');
+L.push('`→` route · `←N` imported by N files · `uses:` local imports only');
+L.push('');
+
+L.push('## Style names (values are in app-map.json)');
+L.push('');
+L.push('```');
+for (const [file, names] of [...stylesByFile.entries()].sort()) {
+  const shown = names.slice(0, 14).join(', ');
+  const more = names.length > 14 ? ` … +${names.length - 14} more` : '';
+  L.push(`${file}: ${shown}${more}`);
+}
+if (stylesByFile.size === 0) L.push('(none)');
+L.push('```');
+L.push('');
+
+// Never truncated. These two are the "don't do it again" record, and a partial
+// version of either is worse than none — it reads as complete.
+L.push('## Risky patterns');
+L.push('');
+if (risky.length === 0) L.push('None.');
+else for (const r of risky) {
+  L.push(`- \`${r.file}\`${r.style ? ` → \`${r.style}\`` : ''}${r.line ? ` (line ${r.line})` : ''}: ${r.reason}`);
+}
+L.push('');
+
+L.push('## Constraints already hit in this project');
+L.push('');
+if (constraints.length === 0) L.push('None yet.');
+else for (const c of constraints) {
+  L.push(`- \`${c.file}\` — ${c.pattern}${c.chose ? ` → user chose: ${c.chose}` : ''}`);
+}
+L.push('');
+L.push('---');
+L.push('');
+L.push('Read this file first. Open `app-map.json` only for a specific resolved');
+L.push('style value, or the full import/used-by graph — everything else is above.');
+L.push('');
+
+const md = L.join('\n');
+fs.writeFileSync(path.join(outDir, 'app-map.md'), md);
+
 console.log(`app-map: ${out.counts.screens} screens, ${out.counts.components} components, ` +
-  `${out.counts.styles} styles, ${out.counts.risky} risky, ${out.counts.constraints} constraints`);
+  `${out.counts.styles} styles, ${out.counts.risky} risky, ${out.counts.constraints} constraints ` +
+  `(digest ${Math.round(md.length / 1024 * 10) / 10}KB vs json ${Math.round(JSON.stringify(out, null, 2).length / 1024 * 10) / 10}KB)`);

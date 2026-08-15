@@ -150,13 +150,18 @@ wastes a phase:
   router, real navigation, real data, driven in a browser.
 
 **1. Read the map and the ledger before you write layout code.**
-Run `node scripts/app-map.mjs` and read `.claude/app-map.json`: every screen and
-its route, every component, who imports what, every `StyleSheet` rule with
-its resolved values, and a `risky` list of style patterns that break on
-device. It also inlines `.claude/design-constraints.json` — the record of
-layouts that already failed in *this* project — so one file read replaces a
-directory crawl. Both are cheap; a grep sweep of an app you already have a
-map of is waste.
+Run `node scripts/app-map.mjs`, then read **`.claude/app-map.md`** — a tree of
+the project annotated with each file's route, what imports it, what it imports,
+its style names, the `risky` list of patterns that break on device, and the
+layouts that already failed in *this* project. One read replaces a directory
+crawl; a grep sweep of an app you already have a map of is waste.
+
+**Read the digest, not the JSON.** `app-map.json` holds the same map plus every
+resolved `StyleSheet` value and the full import graph, and those make it roughly
+six times larger — ~4.8k tokens against ~800 on a two-screen app, before every
+layout edit, growing with every screen added. Open it only when you need a
+specific style value or the complete used-by list. The digest marks everything
+it truncates, so you can always tell when there's more to fetch.
 
 **2. After `tsc` passes, run `scripts/ui-validate.sh`. Silently.**
 It renders every screen headless at phone size and checks real geometry:
@@ -266,13 +271,16 @@ relevant to the phase you're in:
   Every byte of install output goes to `.claude/logs/setup.log`; it prints
   one status line and nothing else. Adds `.claude/` to `.gitignore` so none
   of this apparatus ends up in the user's project history.
-- `scripts/app-map.mjs [projectDir]` — read-only. Writes
-  `.claude/app-map.json`: routes, components, import and used-by graph,
-  every resolved `StyleSheet` value, a `risky` list of device-breaking style
-  patterns, and the current design constraints inlined. Uses the project's
-  own `typescript` (adds no dependency); exits 3 if it can't find one, in
-  which case just read files normally. Rule 1 above — read this before
-  writing layout code.
+- `scripts/app-map.mjs [projectDir]` — read-only. Writes two files:
+  **`.claude/app-map.md`**, a compact annotated tree — routes, what imports
+  what, style names, `risky` patterns, and the design constraints — and
+  `.claude/app-map.json`, the same map plus every resolved `StyleSheet` value
+  and the full import graph. **Read the `.md`; reach for the `.json` only when
+  you need a specific value.** The JSON is ~6× the tokens and rule 1 has you
+  reading it before every layout edit, which is where this skill's context
+  budget actually goes. Uses the project's own `typescript` (adds no
+  dependency); exits 3 if it can't find one, in which case just read files
+  normally.
 - `scripts/ui-validate.sh [projectDir]` — the loop. Refreshes the map,
   regenerates one check per screen, runs them headless, and writes
   `.claude/visual/last-run.json`. `STATUS=pass|seeded|fail|blocked`. Silent

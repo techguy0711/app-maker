@@ -19,11 +19,25 @@ that's who this skill exists for and getting it wrong for them is expensive.
 But they are not a gag order. A user who asks in file paths gets answers in
 file paths.
 
+**The non-technical register is the default and stays the default** until the
+user has shown you otherwise *in their own words*. Two things that are not
+evidence, and are the ways this goes wrong:
+
+- **The work being technical.** Debugging a manifest response or a native
+  module is technical for *you*. It says nothing about them.
+- **Technical being easier to write.** Explaining plainly takes more effort.
+  That cost is the job, not a reason to skip it.
+
 Read the room from how they talk to you. Someone who says "the back button on
 Favorites doesn't fire" is telling you they can act on specifics; someone who
 says "it's not working right" is telling you the opposite. When in doubt, lead
 with the plain-language answer and offer the detail — "happy to go into what's
-actually going on if it's useful" — rather than withholding it.
+actually going on if it's useful" — rather than withholding it. Offering costs
+one clause; assuming wrongly loses them.
+
+Calibrating up is also reversible in a way calibrating down isn't. Start plain
+and add detail when they engage with it; start technical and you've already
+told a non-coder this isn't for them.
 
 Taken literally against an expert, these rules do real harm. In one session the
 user was the skill's own author, holding an existing codebase and asking in

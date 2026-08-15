@@ -362,14 +362,21 @@ If the app needs to talk to any API or store data remotely, use
 ### Before you write layout code: read the map and the ledger
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/app-map.mjs      # writes .claude/app-map.json
+node ${CLAUDE_PLUGIN_ROOT}/scripts/app-map.mjs   # writes app-map.md + app-map.json
 ```
 
-Read that one file instead of crawling the project. It gives you every route
-and the file behind it, every component, the import and used-by graph, every
-`StyleSheet` rule with `const`-referenced values already resolved
-(`width: BUTTON_SIZE` shows as `88`), a `risky` list of style patterns that
-break on device, and the project's design constraints inlined.
+Read `.claude/app-map.md` instead of crawling the project. It's a tree of every
+source file annotated with its route, what imports it, what it imports, its
+style names, the `risky` patterns, and the project's design constraints.
+
+`.claude/app-map.json` beside it has the same map plus every `StyleSheet` rule
+with `const`-referenced values already resolved (`width: BUTTON_SIZE` shows as
+`88`) and the complete import/used-by graph. **That detail is most of the file's
+size** — about six times the digest — so read the JSON when you need a specific
+value or the full graph, not as the default. Rule 1 runs before every layout
+edit, and reading the large one each time is where this skill's context budget
+quietly goes. The digest marks whatever it truncates, so you always know when
+there's more.
 
 Two parts earn their keep every time:
 

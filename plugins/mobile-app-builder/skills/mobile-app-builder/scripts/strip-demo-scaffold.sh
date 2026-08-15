@@ -18,7 +18,7 @@
 # seen and tested so far. If it doesn't recognize the project's layout, it
 # says so and exits without touching anything — do the cleanup by hand
 # following the same read-decide-grep-delete-verify process described in
-# build-flow.md Phase 2, then consider teaching this script the new shape.
+# build-flow/phase-2-scaffold.md, then consider teaching this script the new shape.
 #
 # Usage: strip-demo-scaffold.sh [--name "Display Name"]
 # Run from inside the project root (after cd <app-name>).
@@ -32,7 +32,7 @@ fi
 
 abort() {
   echo "[ABORT] $1" >&2
-  echo "Nothing was changed. Fall back to the manual process in build-flow.md Phase 2." >&2
+  echo "Nothing was changed. Fall back to the manual process in build-flow/phase-2-scaffold.md." >&2
   exit 1
 }
 

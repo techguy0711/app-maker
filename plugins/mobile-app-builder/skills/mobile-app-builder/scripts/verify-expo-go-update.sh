@@ -4,7 +4,7 @@
 # Asks Expo's update server for a bundle EXACTLY the way Expo Go asks for one,
 # and reports whether the user's phone would actually receive it.
 #
-# WHY THIS EXISTS: on the EAS Update fallback (build-flow.md Phase 3, "When the
+# WHY THIS EXISTS: on the EAS Update fallback (build-flow/phase-3-preview-expo-go.md, "When the
 # dev server can't reach the phone at all") every command in the publish
 # sequence reports success — `eas update` prints "✔ Published!" — while the
 # update can still be unloadable on the phone. The whole failure lives on the
@@ -58,8 +58,8 @@ else
   if [ -z "$PROJECT_ID" ]; then
     echo "[ERROR] No EAS project ID in $PROJECT_DIR/app.json." >&2
     echo "        The project isn't linked to EAS yet — run" >&2
-    echo "        'eas init --non-interactive --force' first (build-flow.md," >&2
-    echo "        Phase 3, the EAS Update fallback)." >&2
+    echo "        'eas init --non-interactive --force' first — see the EAS" >&2
+    echo "        Update fallback in build-flow/phase-3-preview-expo-go.md." >&2
     exit 2
   fi
 fi
@@ -157,7 +157,7 @@ if [ "$SAW_204" -eq 1 ]; then
   echo "  204 — published fine, but under a runtime version Expo Go never asks"
   echo "        for. eas update:configure sets {\"policy\":\"appVersion\"}, which"
   echo "        stamps updates 1.0.0. Publish with the Expo Go runtime version"
-  echo "        instead (the app.config.js override in build-flow.md Phase 3),"
+  echo "        instead (the app.config.js override in phase-3-preview-expo-go.md),"
   echo "        then re-run this check."
   echo ""
 fi

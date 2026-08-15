@@ -34,7 +34,7 @@
 #
 # The second form (a full URL as the first arg, detected by "://") skips LAN
 # IP lookup entirely and QRs the URL as-is — for the EAS Update fallback
-# (see build-flow.md Phase 3, "When the dev server can't reach the phone at
+# (see build-flow/phase-3-preview-expo-go.md, "When the dev server can't reach the phone at
 # all"), where the connect URL comes from Expo's cloud, not this machine's
 # network.
 
@@ -76,7 +76,7 @@ case "$ARG1" in
       echo "grep its log output for an exp:// or exps:// URL instead. If this" >&2
       echo "session isn't running on the user's own machine (Claude Code's" >&2
       echo "mobile app, a remote/cloud session), neither LAN nor tunnel will" >&2
-      echo "work at all — see build-flow.md Phase 3's EAS Update fallback." >&2
+      echo "work at all — see build-flow/phase-3-preview-expo-go.md's EAS Update fallback." >&2
       exit 1
     fi
     CONNECT_URL="exp://${LAN_IP}:${PORT}"

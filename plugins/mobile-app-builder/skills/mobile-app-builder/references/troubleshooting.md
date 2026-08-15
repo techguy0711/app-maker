@@ -58,7 +58,7 @@ figure out which of the two cases above it is.
 
 ## No QR code / connection URL shows up in the dev server output at all
 
-This is expected, not a bug — see Phase 3 in `build-flow.md`. Expo CLI only
+This is expected, not a bug — see `build-flow/phase-3-preview-expo-go.md`. Expo CLI only
 draws its QR code and connection URL through an interactive terminal UI
 gated on `stdout` being a real TTY. The dev server has to run as a
 background process (it's long-running), which is never a TTY, so that
@@ -71,7 +71,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh <port> /tmp/preview-qr.png
 (`${CLAUDE_PLUGIN_ROOT}` is an environment variable Claude Code sets to this
 plugin's install location — not a path relative to the project dir you're
 likely `cd`ed into by this point. It has been observed unset in a real
-session, though — see `build-flow.md` Phase 2 for the fallback if a command
+session, though — see `build-flow/phase-2-scaffold.md` for the fallback if a command
 like this one fails with "No such file or directory".)
 
 **Print the ASCII QR block the script outputs directly in your chat reply —
@@ -108,7 +108,7 @@ the user's own network in the first place. Any remote/cloud Claude Code
 session is a candidate for this, not just the mobile app specifically.
 
 Don't debug this as a network misconfiguration on the user's end — it isn't
-one. Skip straight to the EAS Update fallback in `build-flow.md`'s "When the
+one. Skip straight to the EAS Update fallback in `build-flow/phase-3-preview-expo-go.md`'s "When the
 dev server can't reach the phone at all." That path publishes the JS bundle
 to Expo's cloud instead of hosting it from this machine, so no tunnel or LAN
 reachability is needed. It is verified end-to-end; follow its command sequence
@@ -154,7 +154,7 @@ expo install <the-missing-peer-it-names>`.
 ## A project path with a space in it breaks a development build
 
 Confirmed to break three separate things in a real Path B build (see
-`build-flow.md`'s Phase 0.5 / Path B) — this does not affect the Expo Go
+`build-flow/phase-0.5-expo-go-fit.md` and `build-flow/phase-3-preview-dev-build.md`) — this does not affect the Expo Go
 path, only local/EAS native builds:
 
 - Two are fixable with a config plugin that re-quotes the generated Xcode
@@ -198,7 +198,7 @@ open on purpose. Don't silently `kill` a process you didn't start.
 
 Don't reach for `expo run:ios --port X` / `expo run:android --port X` as the
 fix, either — that flag only works if `expo-dev-client` is installed in the
-project (see `build-flow.md`'s Path B). The port arrives via a deep link
+project (see `build-flow/phase-3-preview-dev-build.md`). The port arrives via a deep link
 baked into the dev client binary itself, so without that package the flag is
 silently accepted and does nothing, and the app keeps connecting to whatever
 old server it was last configured for. Free the port or ask before killing
@@ -269,7 +269,7 @@ projects. The prompt gets no terminal to answer since scaffolding runs
 non-interactively, so it silently defaults to skipping git init, leaving
 the new project with no repo of its own. Always check for this after
 scaffolding and init one scoped to just the project if it's missing — see
-the git recipe in `build-flow.md` Phase 2.
+the git recipe in `build-flow/phase-2-scaffold.md`.
 
 **Near-miss, confirmed by testing — do not use `git rev-parse
 --is-inside-work-tree` to decide whether to `git init`.** It answers "is
@@ -285,8 +285,8 @@ directory tree. In testing this had to be killed via command timeout before
 it finished; had it completed and been followed by a commit, it would have
 committed a large swath of unrelated personal files into a repo the user
 never intended to touch. The correct check compares the repo's toplevel to
-the current directory itself — see the corrected recipe in `build-flow.md`
-Phase 2 (`git rev-parse --show-toplevel` must equal `pwd -P`, or `git init`).
+the current directory itself — see the corrected recipe in
+`build-flow/phase-2-scaffold.md` (`git rev-parse --show-toplevel` must equal `pwd -P`, or `git init`).
 
 Never run git commands (`add`, `commit`, `reset`, anything) against whatever
 outer repo a project happens to be nested inside — only ever the project's
@@ -448,7 +448,7 @@ ever reaching them, not replacing them.
 ## The user asks "is my app safe / can I lose my work?"
 
 Reassure concretely: as long as you're committing to git after working
-milestones (Phase 2 in `build-flow.md`), nothing is lost — you can always
+milestones (`build-flow/phase-2-scaffold.md`), nothing is lost — you can always
 go back to the last checkpoint. Say this proactively the first time
 something breaks; it's the single biggest source of non-technical-user
 anxiety mid-project.

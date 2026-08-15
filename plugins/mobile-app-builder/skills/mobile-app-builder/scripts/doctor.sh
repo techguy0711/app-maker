@@ -251,7 +251,7 @@ case "$PREVIEW_DELIVERY" in
     echo ""
     echo "  Then: export EXPO_TOKEN=\"<what they paste>\""
     echo ""
-    echo "Full command sequence: build-flow.md Phase 3, 'When the dev server"
+    echo "Full command sequence: build-flow/phase-3-preview-expo-go.md, 'When the dev server"
     echo "can't reach the phone at all'. Run verify-expo-go-update.sh before"
     echo "handing over a QR code — a successful publish is not evidence the"
     echo "phone can load it."
@@ -260,7 +260,7 @@ esac
 hr
 
 echo "=== Verdict: development-build path (Phase 0.5 said this app needs one) ==="
-echo "This is a different tooling story — read build-flow.md's Path B before"
+echo "This is a different tooling story — read build-flow/phase-3-preview-dev-build.md before"
 echo "acting on any of this. Summary of what each route actually needs:"
 echo ""
 echo "Android (the cheap route):"
@@ -294,7 +294,7 @@ fi
 echo ""
 echo "Whichever route is used, Path B requires actually driving a real"
 echo "target (simulator or emulator) yourself before calling the app ready —"
-echo "see 'Verification is not optional on this path' in build-flow.md."
+echo "see 'Verification is not optional on this path' in build-flow/phase-3-preview-dev-build.md."
 echo ""
 echo "See references/environment-setup.md for exact, copy-pasteable install"
 echo "commands and which ones can run unattended vs need the user to click"

@@ -68,7 +68,7 @@ open "macappstore://apps.apple.com/app/xcode/id497799835"
 ```
 Then say: "I've opened the App Store to Xcode's page — click Get/Install, it'll take a while to download. In the meantime we can keep working using your phone instead of a simulator."
 
-**Default recommendation: skip this entirely.** Use a physical iPhone with the Expo Go app, or the EAS cloud simulator (see `build-flow.md`). Only go through the full Xcode install if the user explicitly wants a local on-screen simulator and doesn't have an iPhone handy.
+**Default recommendation: skip this entirely.** Use a physical iPhone with the Expo Go app, or the EAS cloud simulator (see `build-flow/phase-3-preview-dev-build.md`). Only go through the full Xcode install if the user explicitly wants a local on-screen simulator and doesn't have an iPhone handy.
 
 **CocoaPods** — AUTO, but only needed for local/bare-workflow iOS builds (not for EAS cloud builds or Expo Go).
 ```bash

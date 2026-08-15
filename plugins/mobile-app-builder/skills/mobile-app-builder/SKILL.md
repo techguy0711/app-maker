@@ -39,7 +39,7 @@ explicitly wants a local simulator) — and even then, follow the AUTO / ASK
 FIRST / USER MUST CLICK tiers in `references/environment-setup.md` exactly.
 Don't over-install.
 
-## Phases (full detail in references/build-flow.md)
+## Phases (one file each, under `references/build-flow/`)
 
 These are `build-flow.md`'s numbers, not a second scheme — one set of phase
 numbers across the whole skill, so a cross-reference never needs translating.
@@ -47,10 +47,11 @@ numbers across the whole skill, so a cross-reference never needs translating.
 - **Phase 0 — Understand the idea.** A short plain-language conversation, not
   a spec form. If they already have a working app in another language, this is
   a *port*, which has its own rules — see "Porting an existing app" in
-  `build-flow.md`.
+  `build-flow/phase-0-understand.md`.
 - **Phase 0.5 — Does this fit Expo Go?** Decide right after the Phase 0
   conversation, before touching anything else. Concrete trigger list and
-  cross-checks in `build-flow.md`. This choice determines whether Phase 3 is
+  cross-checks in `build-flow/phase-0.5-expo-go-fit.md`. This choice
+  determines whether Phase 3 is
   the fast QR-code path (Path A, the default) or a development-build path
   (Path B) that needs different tooling and a different, non-negotiable
   verification step — get this right early, it's expensive to discover late.
@@ -98,11 +99,11 @@ numbers across the whole skill, so a cross-reference never needs translating.
    with alternate QR commands in front of the user; the script already
    avoids the ANSI-color-garbage trap those fall into). **Path B (needs a
    dev build):** the QR flow does not apply at all — say so plainly up
-   front, then follow `build-flow.md`'s Path B decision tree (Android via
+   front, then follow `build-flow/phase-3-preview-dev-build.md` (Android via
    EAS cloud build is the cheap route; iOS has no free path). On Path B,
    actually driving a simulator or emulator yourself before calling the app
    ready is a required step, not optional — see "Verification is not
-   optional on this path" in `build-flow.md`.
+   optional on this path" in `build-flow/phase-3-preview-dev-build.md`.
 - **Phase 4 — Iterate.** Take feedback in their own words, translate it to
   code. Every bug from here on is a *runtime* bug reported in one sentence by
   someone who can't see a stack trace — the hardest kind, and the phase that
@@ -139,7 +140,7 @@ A non-technical user cannot tell you the layout is broken in terms you can
 act on. "It looks weird" is the most detail you will ever get, and often you
 won't get even that — they'll assume it's meant to look like that. So you
 check it yourself, before they ever see it. Full mechanics live in
-`references/build-flow.md` Phase 2; these five rules are non-negotiable.
+`references/build-flow/phase-2-verify.md`; these five rules are non-negotiable.
 
 Two checks, and they answer different questions. Reaching for the wrong one
 wastes a phase:
@@ -240,8 +241,12 @@ eyes are still the final say.
 Consult these as needed — don't load them all up front, pull in the one
 relevant to the phase you're in:
 
-- `references/build-flow.md` — the full phase-by-phase process and which
-  `expo:*` skill to use at each step.
+- `references/build-flow.md` — a short **index** of the phases, plus the
+  `${CLAUDE_PLUGIN_ROOT}` check to do before your first script call. Each phase
+  is its own file in `references/build-flow/`, and each one ends by naming the
+  next. **Read one phase file at a time — the one you're in.** The full set is
+  ~12k tokens; a single phase is 400–3,000. Loading phases you aren't in is the
+  other place this skill's context budget goes.
 - `references/environment-setup.md` — exact install commands per tool/OS,
   with the AUTO / ASK FIRST / USER MUST CLICK tier for each.
 - `references/plain-language.md` — how to talk to a non-technical user, a
@@ -264,7 +269,7 @@ relevant to the phase you're in:
   a single-screen stack. Knows the two template shapes tested so far; if it
   doesn't recognize a project's layout it aborts without changing anything
   rather than guessing — fall back to the manual process in
-  `build-flow.md` Phase 2 and consider teaching it the new shape.
+  `build-flow/phase-2-scaffold.md` and consider teaching it the new shape.
 - `scripts/setup-visual-loop.sh [projectDir]` — one-time, per project, right
   after scaffolding. Installs the headless checker (vitest + Playwright
   Chromium + react-native-web) and writes its config into `.claude/visual/`.
@@ -318,4 +323,5 @@ relevant to the phase you're in:
   `troubleshooting.md`). Also accepts a full URL (anything containing
   `://`) instead of a port, skipping LAN IP lookup entirely — for the EAS
   Update fallback when this session isn't on the user's own network at all
-  (`build-flow.md`, "When the dev server can't reach the phone at all").
+  (`build-flow/phase-3-preview-expo-go.md`, "When the dev server can't reach
+  the phone at all").

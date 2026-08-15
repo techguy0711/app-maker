@@ -64,7 +64,7 @@ chrome can be broken on a given OS version regardless of what your app does.
 Path A is the low-risk path and stays the default; this is its one structural
 risk, and it lands on the user's device where you can't see it.
 
-The running list is in `troubleshooting.md` under **Known Expo Go
+The running list is in `../troubleshooting.md` under **Known Expo Go
 divergences** — currently the iOS 26 native-nav-bar hit-testing failure, which
 is live right now and whose obvious workaround (a custom `headerLeft`) does not
 work. Read it before concluding a dead control is your own code, and add to it

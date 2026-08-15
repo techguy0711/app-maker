@@ -96,7 +96,7 @@ brew install --cask android-studio
 ```bash
 brew install --cask android-commandlinetools
 ```
-This installs to `/opt/homebrew/share/android-commandlinetools`.
+This installs to `$(brew --prefix)/share/android-commandlinetools` — `/opt/homebrew` on Apple Silicon, `/usr/local` on Intel.
 
 **3. JDK 17 — AUTO, and required before step 5 will run at all.** The
 command-line tools package above does **not** bundle a JVM, unlike full
@@ -119,7 +119,7 @@ source ~/.zshrc
 
 **4. Point environment variables at it** — AUTO. Add to the user's shell profile (`~/.zshrc` on modern macOS):
 ```bash
-ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
+ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
 {
   echo "export ANDROID_HOME=\"$ANDROID_HOME\""
   echo "export PATH=\"\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools:\$ANDROID_HOME/emulator\""

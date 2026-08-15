@@ -57,15 +57,15 @@ manually" option, which is a text-only fallback that works even if the QR
 render is distorted by an unusual terminal font or width.
 
 Tell them, plainly:
-1. "Install the free 'Expo Go' app from the App Store (iPhone) or Play Store (Android) — just like installing any other app. If it's already installed, open the store page for it anyway and update it — Expo Go only works with one specific version of the tools, so an old install will fail to open a fresh project." (See `troubleshooting.md` → "Project is incompatible with this version of Expo Go" — Phase 2's SDK check should have already prevented this, but mention it if it somehow still comes up.)
-2. "Open your phone's camera (iPhone) or the Expo Go app's scan button (Android), and point it at this QR code." — referring to the image you just sent them, not terminal text.
+1. "Install the free 'Expo Go' app from the App Store (iPhone) or Play Store (Android) — just like installing any other app. If it's already installed, open the store page for it anyway and update it — Expo Go only works with one specific version of the tools, so an old install will fail to open a fresh project." (See `../troubleshooting.md` → "Project is incompatible with this version of Expo Go" — Phase 2's SDK check should have already prevented this, but mention it if it somehow still comes up.)
+2. "Open your phone's camera (iPhone) or the Expo Go app's scan button (Android), and point it at this QR code." — referring to the ASCII QR block you printed directly in your reply, NOT an image file. Sending the PNG instead is the documented failure: it reports success and the user sees nothing.
 3. "The app will open on your phone. Any time I change something, it'll update automatically — you don't need to rescan."
 
 This requires their phone and your dev machine to be on the **same Wi-Fi
 network** — if the QR scan fails, that's the first thing to check (see
-`troubleshooting.md`).
+`../troubleshooting.md`).
 
-Only reach for a local simulator/emulator (`environment-setup.md`) or the
+Only reach for a local simulator/emulator (`../environment-setup.md`) or the
 `expo:eas-simulator` cloud simulator if:
 - the user has no phone available, or
 - they specifically ask to see it "on the computer."
@@ -104,7 +104,7 @@ a remote cloud session, Aug 2026). Every line below is load-bearing, and the
 three obvious ways to shorten it all fail:
 
 ```bash
-export EXPO_TOKEN="…"   # from the user — see environment-setup.md. `eas login`
+export EXPO_TOKEN="…"   # from the user — see ../environment-setup.md. `eas login`
                         # is interactive and cannot work in a remote session;
                         # the token is the only non-interactive auth path.
 
@@ -176,9 +176,23 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh "<update URL>" /tmp/preview-qr.
 Take the URL from `eas update`'s output where it prints one. If you have to
 build it yourself, the manifest URL is
 `https://u.expo.dev/<projectId>?channel-name=preview` (the same `<projectId>`
-that `app.json`'s `expo.updates.url` ends with), and Expo Go opens that same
-URL under the `exp://` scheme. Whichever way you get it, the verifier above —
-not the URL's shape — is what tells you it works.
+that `app.json`'s `expo.updates.url` ends with).
+
+**QR the `exp://` form, not the `https://` form.** `make-preview-qr.sh` encodes
+whatever string you hand it, verbatim — it does no scheme rewriting. A QR
+carrying `https://u.expo.dev/...` opens Safari on a manifest endpoint instead of
+launching Expo Go, and `verify-expo-go-update.sh` will already have returned a
+clean 200 for that same URL — so you hand it over with explicit confirmation
+behind a code that cannot work. Substitute the scheme yourself:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh \
+  "exp://u.expo.dev/<projectId>?channel-name=preview" /tmp/preview-qr.png
+```
+
+Verify with the `https://` URL; put the `exp://` one in the QR. The verifier
+answers "is there a bundle to fetch", never "will this QR launch the app" —
+different questions, and only the first one is automated.
 
 Two things that remain true on this path:
 

@@ -20,7 +20,7 @@ than the store's Expo Go supports produces a project that cannot open on the
 user's phone no matter how much they update the app, and it shows up as
 "Project is incompatible with this version of Expo Go." Checking first
 avoids the whole failure class instead of debugging it after the fact. See
-`troubleshooting.md` for the full story if you're fixing an
+`../troubleshooting.md` for the full story if you're fixing an
 already-scaffolded project instead of starting fresh.
 
 **Path B (needs a dev build): skip `check-expo-go-sdk.sh` entirely.** It

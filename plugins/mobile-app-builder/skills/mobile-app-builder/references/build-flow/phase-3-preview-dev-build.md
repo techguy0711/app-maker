@@ -28,7 +28,7 @@ One sharp edge worth knowing before it costs a debugging cycle: **`expo run:ios
 is installed.** The port a dev build connects to arrives via a deep link
 baked into the client at build/launch time — without expo-dev-client, there's
 no deep-link mechanism to carry it, so the flag is silently accepted and does
-nothing. This compounds with the stale-server problem in `troubleshooting.md`
+nothing. This compounds with the stale-server problem in `../troubleshooting.md`
 ("A stale `expo start` from a different project silently hijacks a dev
 build"): passing `--port`
 looks like it should fix a port collision, and on this path it won't, with no
@@ -54,7 +54,7 @@ without the user. Lay this out for them before picking a direction:
   locally and the device connected by cable, and expires and needs
   reinstalling every 7 days. It is not a free alternative to the EAS path;
   it's a different, heavier path that still ends up needing Xcode.
-- **iOS locally needs full Xcode.app**, which `environment-setup.md`
+- **iOS locally needs full Xcode.app**, which `../environment-setup.md`
   already correctly marks USER MUST CLICK: App Store only, the user's own
   Apple ID sign-in, 10–40GB, no CLI install path at all. Surface the
   scheduling consequence of this plainly, especially if it's the only
@@ -70,7 +70,7 @@ without the user. Lay this out for them before picking a direction:
 **Rule of thumb, and the reason Android is the sensible fallback whenever
 Xcode is off the table:** Android's entire toolchain — command-line SDK,
 emulator, AVD — can be bootstrapped end-to-end by you, the agent, with a
-single ASK FIRST go-ahead (see `environment-setup.md`'s Android section:
+single ASK FIRST go-ahead (see `../environment-setup.md`'s Android section:
 no GUI wizard, no account, no human-only gate anywhere in it). iOS cannot
 be bootstrapped at all — every real iOS path terminates in a step only a
 human can click through (an App Store sign-in, a developer-account

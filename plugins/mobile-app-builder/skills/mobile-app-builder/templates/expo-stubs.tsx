@@ -113,6 +113,76 @@ export const Gesture = {
   Tap: () => ({ onEnd: () => Gesture.Tap() }),
 };
 
+// --- react-native-reanimated ------------------------------------------------
+// vitest.config.ts aliases this package here, but nothing answered for it, so
+// any screen doing `import Animated, { useSharedValue } from
+// 'react-native-reanimated'` failed to IMPORT — not to render. A suite-level
+// import error produces zero failing *tests*, so the screen was silently never
+// checked while the run still looked like a layout problem. Confirmed on a
+// real three-screen app: the one screen with a spring animation was the only
+// one never validated, and nothing said so.
+//
+// Everything here is deliberately inert. Animations are a fidelity concern and
+// this harness measures geometry; what matters is that the component tree
+// renders at its resting layout, which is exactly what a no-op timing function
+// and an identity style give you.
+const AnimatedView = PassThrough('Animated.View');
+
+function makeAnimated(label: string) {
+  return PassThrough(`Animated.${label}`);
+}
+
+export const useSharedValue = <T,>(initial: T) => ({ value: initial });
+export const useDerivedValue = <T,>(fn: () => T) => ({ value: fn() });
+export const useAnimatedStyle = (fn: () => object) => {
+  try {
+    return fn();
+  } catch {
+    // A worklet reading `.value` off something we didn't stub shouldn't take
+    // the whole screen down — resting layout is still measurable without it.
+    return {};
+  }
+};
+export const useAnimatedRef = () => React.createRef();
+export const useAnimatedScrollHandler = () => () => {};
+export const useAnimatedGestureHandler = () => () => {};
+// Timing/spring helpers return the target value directly: the resting state is
+// what the layout checks should see.
+export const withTiming = <T,>(to: T) => to;
+export const withSpring = <T,>(to: T) => to;
+export const withDelay = <T,>(_ms: number, to: T) => to;
+export const withSequence = <T,>(...steps: T[]) => steps[steps.length - 1];
+export const withRepeat = <T,>(anim: T) => anim;
+export const cancelAnimation = () => {};
+export const runOnJS = <F extends (...a: never[]) => unknown>(fn: F) => fn;
+export const runOnUI = <F extends (...a: never[]) => unknown>(fn: F) => fn;
+export const interpolate = (_v: number, _in: number[], out: number[]) => out[0] ?? 0;
+export const interpolateColor = (_v: number, _in: number[], out: string[]) => out[0] ?? 'transparent';
+export const Easing = {
+  linear: (t: number) => t, ease: (t: number) => t, quad: (t: number) => t,
+  cubic: (t: number) => t, bezier: () => (t: number) => t,
+  in: (f: (t: number) => number) => f, out: (f: (t: number) => number) => f,
+  inOut: (f: (t: number) => number) => f,
+};
+export const Extrapolation = { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' };
+// Layout/entering/exiting animation builders. Chainable no-ops — screens use
+// them as `FadeIn.duration(300).delay(100)`, and any missing link in that
+// chain is another import-time crash.
+const chainable = (): Record<string, unknown> =>
+  new Proxy({}, { get: () => () => chainable() });
+export const FadeIn = chainable();
+export const FadeOut = chainable();
+export const SlideInRight = chainable();
+export const SlideOutLeft = chainable();
+export const Layout = chainable();
+export const LinearTransition = chainable();
+
+// --- expo-glass-effect ------------------------------------------------------
+// Aliased in vitest.config.ts with nothing behind it, same failure shape.
+export const GlassView = PassThrough('GlassView');
+export const GlassContainer = PassThrough('GlassContainer');
+export const isLiquidGlassAvailable = () => false;
+
 // --- expo-font / expo-splash-screen -----------------------------------------
 export const useFonts = () => [true, null] as const;
 export const loadAsync = async () => {};
@@ -298,4 +368,17 @@ export default Object.assign(DefaultStub, {
   Swipeable, ReanimatedSwipeable,
   impactAsync, notificationAsync, selectionAsync,
   ImpactFeedbackStyle, NotificationFeedbackType,
+  // Reanimated's default export is `Animated`, and every alias in
+  // vitest.config.ts lands on this one file — so `import Animated from
+  // 'react-native-reanimated'` arrives here. Without these properties
+  // `<Animated.View>` is `undefined` and React throws "Element type is
+  // invalid" at import time, taking the whole screen out of the check set.
+  View: AnimatedView,
+  ScrollView: makeAnimated('ScrollView'),
+  FlatList: makeAnimated('FlatList'),
+  // `Animated.Text`/`Animated.Image` intentionally reuse the @expo/ui stubs
+  // above — same name, same job, and duplicating them would drift.
+  createAnimatedComponent: <C,>(Component: C) => Component,
+  addWhitelistedNativeProps: () => {},
+  addWhitelistedUIProps: () => {},
 });

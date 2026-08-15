@@ -47,7 +47,23 @@ if (!map.screens?.length) {
   process.exit(4);
 }
 
-const slug = (route) => (route === '/' ? 'root' : route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase());
+const baseSlug = (route) => (route === '/' ? 'root' : route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase());
+// Every non-alphanumeric run collapses to '-', so `/settings/profile` and
+// `/settings-profile` (also `/a_b` vs `/a-b`, `/(tabs)/x` vs `/tabs/x`) produced
+// the SAME filename: the second write silently overwrote the first while the
+// counter still reported both. One screen lost its safety net and the log said
+// it had one. Disambiguate on collision rather than clobbering.
+const usedSlugs = new Map();
+const slug = (route) => {
+  const base = baseSlug(route);
+  if (!usedSlugs.has(base)) { usedSlugs.set(base, route); return base; }
+  if (usedSlugs.get(base) === route) return base;
+  let n = 2;
+  while (usedSlugs.has(`${base}-${n}`)) n += 1;
+  const unique = `${base}-${n}`;
+  usedSlugs.set(unique, route);
+  return unique;
+};
 
 let written = 0;
 for (const screen of map.screens) {
@@ -114,3 +130,13 @@ test('${screen.route} — layout is structurally sound', async () => {
 const skipped = map.screens.filter(s => s.usesExpoUi).map(s => s.route);
 console.log(`gen-visual-tests: ${written} test(s)` +
   (skipped.length ? ` (skipped native-UI screens: ${skipped.join(', ')})` : ''));
+
+// Zero tests written is the same situation as zero screens, and must exit the
+// same way. The guard at the top only covers an empty map, so an app whose
+// every screen uses @expo/ui fell through here with exit 0 — and ui-validate.sh
+// only treats exit 4 as "nothing to check". It then ran vitest against an
+// include glob matching nothing, which cannot pass, and reported blocked-infra:
+// the agent goes off diagnosing broken infrastructure for a project where there
+// was simply nothing to check. Not hypothetical — phase-2-scaffold.md actively
+// encourages building screens with expo:expo-ui.
+if (written === 0) process.exit(4);

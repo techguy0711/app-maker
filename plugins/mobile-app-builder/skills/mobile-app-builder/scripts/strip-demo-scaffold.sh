@@ -125,7 +125,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Edit app/index.tsx to build your app</ThemedText>
+        <ThemedText type="subtitle">Edit app/index.tsx to build your app</ThemedText>
       </SafeAreaView>
     </ThemedView>
   );
@@ -194,7 +194,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Edit src/app/index.tsx to build your app</ThemedText>
+        <ThemedText type="subtitle">Edit src/app/index.tsx to build your app</ThemedText>
       </SafeAreaView>
     </ThemedView>
   );

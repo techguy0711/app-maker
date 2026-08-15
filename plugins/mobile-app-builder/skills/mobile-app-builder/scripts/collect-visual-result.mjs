@@ -59,6 +59,23 @@ function failureMessages() {
       }
     }
   }
+  // A screen that fails to IMPORT never produces an assertion, so the loop
+  // above sees nothing: `numFailedTests` stays 0 while an entire screen goes
+  // unchecked. The run then reports `fail` with an empty failures list — no
+  // violation, no diff, nothing to act on — and the screen's absence from the
+  // check set is never mentioned at all. Confirmed on a real three-screen app
+  // whose one animated screen was silently the only one never validated.
+  // Suite-level failures live in `message` on the file entry instead.
+  for (const file of report?.testResults ?? []) {
+    if (file.status !== 'failed') continue;
+    const hadAssertionFailure = (file.assertionResults ?? []).some(a => a.status === 'failed');
+    if (hadAssertionFailure || !file.message) continue;
+    out.push({
+      title: String(file.name).replace(ANSI, ''),
+      message: String(file.message).replace(ANSI, ''),
+      suiteLevel: true,
+    });
+  }
   return out;
 }
 
@@ -84,8 +101,32 @@ if (seedCheck) {
 const failures = [];
 const images = [];
 
-for (const { title, message } of msgs) {
+for (const { title, message, suiteLevel } of msgs) {
   if (RE_NO_REF.test(message)) continue; // already handled by the seed pass
+
+  // A screen that could not be imported was never checked. That is a gap in
+  // the stubs, not a defect in the layout, and it must be said in those words
+  // — the failure text mentions the screen file, so the tempting reading is
+  // "this screen is broken" and the tempting next move is to rewrite it.
+  if (suiteLevel) {
+    const missing =
+      /Failed to resolve import ["']([^"']+)["']/.exec(message)?.[1] ??
+      /Cannot find (?:module|package) ["']([^"']+)["']/.exec(message)?.[1] ??
+      /does not provide an export named ['"]?(\w+)/.exec(message)?.[1] ??
+      null;
+    failures.push({
+      kind: 'import',
+      screen: title,
+      missing,
+      fix: missing
+        ? `'${missing}' has no stand-in. Add the missing export to .claude/visual/expo-stubs.tsx ` +
+          `(and to the skill's templates/expo-stubs.tsx so the next project gets it too), then re-run.`
+        : `This screen could not be imported, so it was NOT checked. Read the message below. ` +
+          `A missing export in .claude/visual/expo-stubs.tsx is the usual cause. Do not change the layout.`,
+      message: message.split('\n').slice(0, 8).join('\n'),
+    });
+    continue;
+  }
 
   const layout = RE_LAYOUT.exec(message);
   if (layout) {
@@ -159,18 +200,49 @@ if (report && rc === 0) status = seeded ? 'seeded' : 'pass';
 else if (!report) status = 'error';
 else status = 'fail';
 
+// An unimportable screen outranks anything else in the run: until it is fixed
+// that screen has no safety net at all, and the fix (a stub export) has
+// nothing to do with layout. Given its own status so it can never consume the
+// layout attempt budget or reach the "your design has a constraint"
+// conversation, both of which would be about the wrong thing entirely.
+const importFailures = failures.filter(f => f.kind === 'import');
+if (status === 'fail' && importFailures.length) status = 'stub-gap';
+
+// The signature answers "is this the SAME problem as last time", and it used to
+// include every `check:element` pair. That made it far too sensitive: narrowing
+// a too-wide row fixes some elements before others, the violation list changes,
+// the signature changes, and the attempt counter resets to 1. Measured on a
+// real three-card row — five consecutive failures, `attempts=1` every time,
+// `blocked` never fired. Incremental narrowing is the single most common way
+// anyone fixes an overflow, so rule 3's guard against endless layout loops was
+// absent in exactly the case it exists for.
+//
+// Keyed on the distinct check *types* per file instead. Same intent — a
+// genuinely new kind of problem still earns a fresh budget — without treating
+// partial progress on the same problem as a new one.
 const signature = crypto.createHash('sha1').update(JSON.stringify(
   failures.map(f => [
-    f.kind, f.screen, f.file,
-    (f.violations ?? []).map(v => `${v.check}:${v.element}`).sort(),
-  ]),
+    f.kind, f.file,
+    [...new Set((f.violations ?? []).map(v => v.check))].sort(),
+  ]).sort(),
 )).digest('hex').slice(0, 12);
+
+// Backstop for the case the signature still can't see: an agent that keeps
+// producing genuinely different failures, one after another, is also stuck —
+// just less legibly. Counted separately so a real sequence of distinct problems
+// still gets its per-problem budget first.
+let prevConsecutive = 0;
+try { prevConsecutive = JSON.parse(fs.readFileSync(COUNTER, 'utf8')).consecutiveFailures || 0; }
+catch { /* first run */ }
+const isFailing = status === 'fail';
+const consecutiveFailures = isFailing ? prevConsecutive + 1 : 0;
+const CONSECUTIVE_LIMIT = 6;
 
 let prev = { attempts: 0, signature: null };
 try { prev = JSON.parse(fs.readFileSync(COUNTER, 'utf8')); } catch { /* first run */ }
 
 let attempts;
-if (status === 'pass' || status === 'seeded') attempts = 0;
+if (status === 'pass' || status === 'seeded' || status === 'stub-gap') attempts = 0;
 // An infrastructure error is not a failed design attempt. Letting it consume
 // the budget would march a perfectly good layout toward the "your design
 // doesn't work" conversation because a config file was broken.
@@ -179,10 +251,17 @@ else if (prev.signature === signature) attempts = (prev.attempts || 0) + 1;
 else attempts = 1;
 
 if (attempts >= BUDGET && status === 'fail') status = 'blocked';
+// Stuck is stuck, even when every round looks different.
+if (status === 'fail' && consecutiveFailures >= CONSECUTIVE_LIMIT) status = 'blocked';
 
 fs.mkdirSync(VIS, { recursive: true });
 fs.writeFileSync(COUNTER, JSON.stringify(
-  { attempts, signature: attempts ? signature : null, updatedAt: new Date().toISOString() }, null, 2));
+  {
+    attempts,
+    signature: attempts ? signature : null,
+    consecutiveFailures,
+    updatedAt: new Date().toISOString(),
+  }, null, 2));
 
 const rel = p => (p && p.startsWith(projectDir) ? path.relative(projectDir, p) : p);
 
@@ -196,8 +275,11 @@ fs.writeFileSync(RESULT, JSON.stringify({
     status === 'blocked'
       ? `Same failure ${attempts} times. Stop editing this layout. Follow the non-technical fallback: ` +
         `offer the user two simpler alternatives in plain English, then record the outcome with design-constraint.mjs.`
-      : status === 'seeded'
-        ? 'Reference screenshots were created on this run. Nothing to fix.'
+      : status === 'stub-gap'
+        ? `${importFailures.length} screen(s) could not be imported and were NOT checked — see failures[].fix. ` +
+          `This is a missing stub, not a layout problem. Do not redesign anything; add the export and re-run.`
+        : status === 'seeded'
+          ? 'Reference screenshots were created on this run. Nothing to fix.'
         : status === 'fail'
           ? 'Fix the listed violations, then run ui-validate.sh again. Look at the diff images before changing layout code.'
           : status === 'error'

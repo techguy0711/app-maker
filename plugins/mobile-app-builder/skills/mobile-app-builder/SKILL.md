@@ -1,7 +1,7 @@
 ---
 name: mobile-app-builder
 description: Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, handling all the developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval — never exposing terminal output, jargon, or setup decisions to the user. Use whenever someone who isn't a programmer asks for an app to be built for them, wants help getting an app onto their phone, or asks about installing Xcode/Android Studio/dev tools for a mobile project. Built on top of the expo:* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client).
-version: 1.9.1
+version: 1.10.0
 license: MIT
 ---
 
@@ -106,8 +106,9 @@ numbers across the whole skill, so a cross-reference never needs translating.
    front, then follow `build-flow/phase-3-preview-dev-build.md` (Android via
    EAS cloud build is the cheap route; iOS has no free path). On Path B,
    actually driving a simulator or emulator yourself before calling the app
-   ready is a required step, not optional — see "Verification is not
-   optional on this path" in `build-flow/phase-3-preview-dev-build.md`.
+   ready is a required step, not optional — see "Verification is not required
+   for Path A. It is not optional for Path B." in
+   `build-flow/phase-3-preview-dev-build.md`.
 - **Phase 4 — Iterate.** Take feedback in their own words, translate it to
   code. Every bug from here on is a *runtime* bug reported in one sentence by
   someone who can't see a stack trace — the hardest kind, and the phase that
@@ -268,8 +269,9 @@ relevant to the phase you're in:
   own API is unreachable from this shell, so the token ask is off too.
 - `scripts/check-expo-go-sdk.sh` — read-only check of which SDK the App
   Store/Play Store build of Expo Go currently supports, and the exact
-  `create-expo-app` flag to scaffold at it. Run before every fresh scaffold
-  (Phase 2) — see `troubleshooting.md` for why this matters.
+  `create-expo-app` flag to scaffold at it. **Path A only** — run before every
+  fresh Path A scaffold (Phase 2), and never on Path B, where following its
+  output can pin the project below the SDK a required native package needs — see `troubleshooting.md` for why this matters.
 - `scripts/strip-demo-scaffold.sh [--name "Display Name"]` — removes the
   template's demo tabs/explore/modal/components and rewrites the layout to
   a single-screen stack. Knows the two template shapes tested so far; if it
@@ -305,7 +307,12 @@ relevant to the phase you're in:
   changed or a control is reported as unresponsive — not on every edit; the
   export step costs about a minute.
 - `scripts/design-constraint.mjs add|list [projectDir]` — the ledger from
-  rule 4. `add --file … --pattern … --checks … --styles … --chose …`.
+  rule 4. The two list-ish flags take different shapes and the script rejects
+  the wrong one, so copy them exactly: `--checks` is comma-separated,
+  `--styles` is a JSON object.
+  `add --file app/index.tsx --pattern "three cards side by side"
+  --checks overflow-right,small-tap-target
+  --styles '{"flexDirection":"row","gap":24}' --chose "One card per row"`
 - `scripts/verify-expo-go-update.sh [projectId|projectDir] [channel]` — asks
   Expo's update server for a bundle exactly the way Expo Go asks, and says
   whether the phone would actually get one. Mandatory before handing over a QR

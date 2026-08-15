@@ -8,7 +8,7 @@ Ask in plain language, one or two questions at a time, not a form:
 - "Any apps you like the feel of, that I could use as a reference?"
 
 Don't ask about tech stack, navigation patterns, state management, etc. — that's
-your job to decide, not theirs. See `plain-language.md` for phrasing rules.
+your job to decide, not theirs. See `../plain-language.md` for phrasing rules.
 
 ## Porting an existing app
 

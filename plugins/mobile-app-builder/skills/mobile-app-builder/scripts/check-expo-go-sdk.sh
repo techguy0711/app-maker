@@ -25,9 +25,28 @@ if [ $CURL_EXIT -ne 0 ] || [ -z "$RESPONSE" ]; then
   echo "       --template default (@latest) — that risks the exact failure" >&2
   echo "       this check exists to prevent." >&2
   echo "" >&2
-  echo "       Options: retry once network is back, or tell the user plainly" >&2
-  echo "       that you can't verify Expo Go compatibility right now and ask" >&2
-  echo "       whether they'd rather wait or proceed at their own risk." >&2
+  echo "" >&2
+  echo "       THIS IS A HARD STOP FOR PATH A, NOT AN ADVISORY. Expo Go runs" >&2
+  echo "       exactly one SDK version. Guess high and the project cannot open" >&2
+  echo "       until the store catches up; guess low and it cannot open either." >&2
+  echo "       There is no safe default and no 'probably fine'. Reasoning from" >&2
+  echo "       how mature an SDK looks on npm predicts the wrong variable — the" >&2
+  echo "       gate is Apple/Google's review of the Expo Go build, not the SDK's" >&2
+  echo "       age, and a wrong answer is only discovered at Phase 3 with every" >&2
+  echo "       screen already written." >&2
+  echo "" >&2
+  echo "       Get it from the one place that always knows — the user's phone:" >&2
+  echo "" >&2
+  echo "         \"Open the Expo Go app on your phone and tell me the version" >&2
+  echo "          number on its home screen. Ten seconds, and it saves us" >&2
+  echo "          building something your phone can't open.\"" >&2
+  echo "" >&2
+  echo "       Scaffold with --template default@sdk-<major> from what they say." >&2
+  echo "       If they can't check, say plainly that you cannot verify it, name" >&2
+  echo "       the version you intend to use and why, and let them decide. Never" >&2
+  echo "       present a guess as a verified answer." >&2
+  echo "" >&2
+  echo "       On a machine with network this script answers it outright." >&2
   exit 1
 fi
 

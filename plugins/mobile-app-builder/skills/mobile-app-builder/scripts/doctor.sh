@@ -368,7 +368,7 @@ fi
 echo ""
 echo "Whichever route is used, Path B requires actually driving a real"
 echo "target (simulator or emulator) yourself before calling the app ready —"
-echo "see 'Verification is not optional on this path' in build-flow/phase-3-preview-dev-build.md."
+echo "see 'Verification is not required for Path A. It is not optional for Path B.' in build-flow/phase-3-preview-dev-build.md."
 echo ""
 echo "See references/environment-setup.md for exact, copy-pasteable install"
 echo "commands and which ones can run unattended vs need the user to click"

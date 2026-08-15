@@ -6,6 +6,10 @@ Take feedback in the user's own words ("make the button bigger", "I want a
 list of my recipes on the home screen") and translate it into code changes
 yourself. Never ask them to describe a change in technical terms. After each
 change, it reloads automatically on their phone — no rebuild, no reinstall.
+**On the LAN/QR path only.** On the EAS Update fallback there is no live
+reload at all: re-run the `eas update` line after every change and tell them
+to close and reopen the app, or they sit waiting for a refresh that isn't
+coming (`../build-flow/phase-3-preview-expo-go.md`).
 
 **Run both gates again after every change**, not just the first time:
 
@@ -44,7 +48,7 @@ geometry, and a control that does nothing at all is invisible to both.
 Two things keep this phase bounded, and they are the two most valuable habits
 in the skill:
 
-- **`troubleshooting.md` → "A control doesn't respond, but the app otherwise
+- **`../troubleshooting.md` → "A control doesn't respond, but the app otherwise
   works."** Start with the discriminating question — *does it do nothing, or
   the wrong thing?* — before writing a line of code. It splits the search space
   in half for the cost of one sentence.

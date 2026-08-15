@@ -48,6 +48,24 @@ mkdir -p "$LOGD" "$VIS"
   echo "ui-validate $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } >>"$LOG" 2>&1
 
+# 0. Refresh any template the skill has since updated. setup-visual-loop.sh
+# copies these once, at setup, and nothing ever re-copied them — so a fix to
+# templates/expo-stubs.tsx (which SKILL.md explicitly tells you to make when a
+# screen fails to import a native-only module) had no effect on any project
+# that already existed. The agent edits the template, re-runs this, gets the
+# byte-identical failure, and the natural next move is to start redesigning a
+# layout that was never the problem.
+#
+# `-nt` copies only when the skill's copy is strictly newer, so a stub the
+# agent added directly to the project survives. It is a bash builtin test, so
+# unlike `cp -u` it behaves identically on macOS and Linux.
+for tpl in vitest.config.ts setup.ts layout-checks.ts expo-stubs.tsx; do
+  if [ -f "$SKILL_DIR/templates/$tpl" ] && [ "$SKILL_DIR/templates/$tpl" -nt "$VIS/$tpl" ]; then
+    cp "$SKILL_DIR/templates/$tpl" "$VIS/$tpl" &&
+      echo "--- refreshed $tpl from the skill's templates" >>"$LOG"
+  fi
+done
+
 # 1. Refresh the map, then regenerate checks from it. Screens the user asked
 #    to remove stop being checked; screens they just asked for start being
 #    checked. No stale test files to reconcile by hand.
@@ -143,6 +161,11 @@ fi
 
 case "$STATUS" in
   pass)    echo "STATUS=pass ATTEMPTS=0"; exit 0 ;;
+  # One or more screens could not be imported, so they were never checked. Its
+  # own exit code (4) because the response is neither "fix the layout" nor
+  # "the harness is broken": add the missing export named in last-run.json's
+  # failures[].fix, then re-run. Costs no attempt.
+  stub-gap) echo "STATUS=stub-gap ATTEMPTS=0 UNCHECKED=$COUNT RESULT=.claude/visual/last-run.json"; exit 4 ;;
   seeded)  echo "STATUS=seeded ATTEMPTS=0 NOTE=baselines-created"; exit 0 ;;
   blocked) echo "STATUS=blocked ATTEMPTS=$ATTEMPTS FAILURES=$COUNT RESULT=.claude/visual/last-run.json"; exit 1 ;;
   fail)    echo "STATUS=fail ATTEMPTS=$ATTEMPTS FAILURES=$COUNT RESULT=.claude/visual/last-run.json"; exit 1 ;;

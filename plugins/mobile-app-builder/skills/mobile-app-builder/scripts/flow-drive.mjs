@@ -44,12 +44,22 @@ try {
 const mapPath = path.join(projectDir, '.claude/app-map.json');
 if (!fs.existsSync(mapPath)) fail(`No ${mapPath} — run app-map.mjs first.`);
 
-const routes = (JSON.parse(fs.readFileSync(mapPath, 'utf8')).screens || [])
+const allRoutes = (JSON.parse(fs.readFileSync(mapPath, 'utf8')).screens || [])
   .map(s => s.route)
-  // A dynamic segment has no literal URL to visit. Reaching `/drink/[id]` is
-  // what the forward hop below does anyway, via a link the app itself renders.
-  .filter(r => r && !r.includes('[') && !r.includes(':'))
+  .filter(Boolean)
   .sort();
+
+const isDynamic = r => r.includes('[') || r.includes(':');
+// A dynamic segment has no literal URL to visit. The intent is that the
+// forward hop below reaches `/drink/[id]` via a link the app itself renders —
+// but that only happens if the app has DATA. A list/detail app opens with an
+// empty list on a fresh browser profile, so no item links exist, the detail
+// route is never reached, and the run still prints a clean pass. These are now
+// reported instead of quietly dropped: "ROUTES=2 ✓" on a three-route app reads
+// as full coverage, and the detail screen — the one with params and a back
+// button — is exactly where flow bugs live.
+const routes = allRoutes.filter(r => !isDynamic(r));
+const dynamicRoutes = allRoutes.filter(isDynamic);
 
 if (routes.length === 0) fail('No static routes in the app map — nothing to check.', 2);
 
@@ -263,13 +273,37 @@ for (const r of results) {
   const back = r.back ? `after back: ${pad(r.back)}` : 'round trip not run  ';
   console.log(`  ${pad(r.route)}  ${back}  ${mark}${r.note ? `  (${r.note})` : ''}`);
 }
+
+// Which dynamic routes were actually reached by a forward hop, and which were
+// not. A route nobody linked to on a data-less first run is unverified, and
+// saying so is the whole point — silence here reads as coverage.
+const visited = new Set(results.map(r => r.forward).filter(Boolean));
+const matchesDynamic = (visitedPath, dyn) => {
+  const rx = new RegExp('^' + dyn.replace(/\[[^\]]+\]/g, '[^/]+').replace(/\//g, '\\/') + '$');
+  return rx.test(visitedPath);
+};
+const unreached = dynamicRoutes.filter(d => ![...visited].some(v => matchesDynamic(v, d)));
+for (const d of dynamicRoutes) {
+  const reached = !unreached.includes(d);
+  console.log(
+    `  ${pad(d)}  ${reached ? 'reached via a link ' : 'NOT REACHED       '}  ${reached ? '✓' : '—'}` +
+      (reached ? '' : '  (no in-app link pointed here — this screen was NOT flow-checked)'),
+  );
+}
+if (unreached.length) {
+  console.log('');
+  console.log(`  ${unreached.length} dynamic route(s) unverified: ${unreached.join(', ')}`);
+  console.log('  A list/detail app has no item links until it has data. To check these,');
+  console.log('  seed the app with an item first, or navigate to a concrete URL by hand.');
+}
 console.log('');
 
 const outDir = path.join(projectDir, '.claude/flow');
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(
   path.join(outDir, 'last-run.json'),
-  JSON.stringify({ when: new Date().toISOString(), base, routes: results, pageErrors: consoleErrors }, null, 2),
+  JSON.stringify({ when: new Date().toISOString(), base, routes: results,
+    dynamicRoutes, unreachedDynamicRoutes: unreached, pageErrors: consoleErrors }, null, 2),
 );
 
 const failed = results.filter(r => !r.ok);

@@ -12,7 +12,7 @@ not in Phase 3.** It means the shell you're running commands in isn't on the
 user's network — no LAN IP at all, or one inside RFC 5737's TEST-NET ranges,
 which can never be a real host. Neither the QR flow nor `--tunnel` can work
 from there, and the fallback that does work authenticates with an Expo access
-token only the user can create (`environment-setup.md`, USER MUST CLICK).
+token only the user can create (`../environment-setup.md`, USER MUST CLICK).
 
 Ask for it now, in the same breath as anything else you need from them, and
 keep building while they fetch it. This is the whole point of checking at
@@ -23,7 +23,7 @@ documentation-only address) was sitting there in Phase 1 the entire time.
 
 **If Phase 0.5 said Expo Go fits** (the default path): only Node.js, npm,
 and git are strictly needed — call out anything else missing from Core
-Tools in `environment-setup.md` and fix it before scaffolding. Do **not**
+Tools in `../environment-setup.md` and fix it before scaffolding. Do **not**
 proactively install Xcode, Android Studio, or any simulator at this point.
 Those are Path A's Phase 3 doesn't need them, and most users never do —
 Expo Go on their own phone covers preview, and EAS Build covers the final
@@ -49,7 +49,7 @@ touching either. Only reach for a local install when:
   dependency on EAS's cloud simulator.
 - They explicitly ask to install them.
 
-In all of these cases, go to `environment-setup.md` for exact commands, and
+In all of these cases, go to `../environment-setup.md` for exact commands, and
 follow its AUTO / ASK FIRST / USER MUST CLICK guidance — don't silently
 kick off a 10GB Xcode download or an Android Studio install without saying
 so first.

@@ -82,8 +82,39 @@ npm install --save-dev --no-fund --no-audit \
 
 # 3. Headless Chromium. --only-shell is the smaller headless-only build;
 #    it is all `toMatchScreenshot` needs and downloads noticeably faster.
-echo "--- playwright install chromium" >>"$LOG"
-npx --yes playwright install chromium --only-shell >>"$LOG" 2>&1 || fail browser-install
+#
+#    Two rules here, both learned the hard way.
+#
+#    Don't download what's already there. Sandboxes and CI images routinely
+#    pre-bake a Playwright browser and point PLAYWRIGHT_BROWSERS_PATH at it,
+#    and `playwright install` ignores PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD because
+#    it's an explicit install command — so it reaches for a CDN that a
+#    restricted environment blocks, to fetch something already on disk. The
+#    only check worth trusting is launching it: a browser that opens and
+#    closes is usable, whatever its revision number claims.
+browser_usable() {
+  node -e "require('playwright').chromium.launch({headless:true}).then(b=>b.close()).then(()=>process.exit(0),()=>process.exit(1))" 2>/dev/null
+}
+
+echo "--- checking for a usable headless chromium" >>"$LOG"
+if browser_usable; then
+  echo "--- chromium already usable, skipping download" >>"$LOG"
+  BROWSER_STATUS=ok
+else
+  echo "--- playwright install chromium" >>"$LOG"
+  if npx --yes playwright install chromium --only-shell >>"$LOG" 2>&1 && browser_usable; then
+    BROWSER_STATUS=ok
+  else
+    BROWSER_STATUS=missing
+  fi
+fi
+
+#    And don't let a missing browser cancel the rest of setup. Aborting here
+#    used to leave .claude/visual/ empty, so every later ui-validate.sh call
+#    reported `not-configured` — which reads as "this project was never set
+#    up" and hides the real, single, fixable cause. Steps 4-6 are local file
+#    copies that cost nothing and cannot fail for network reasons; run them
+#    regardless, and report the browser problem at the end.
 
 # 4. Config + helpers. Copied, not generated, so they stay reviewable.
 cp "$SKILL_DIR/templates/vitest.config.ts"  "$VIS_DIR/vitest.config.ts"
@@ -101,5 +132,13 @@ LEDGER="$PROJECT/.claude/design-constraints.json"
   "constraints": []
 }
 EOF
+
+if [ "$BROWSER_STATUS" != "ok" ]; then
+  # Config is on disk, so this is recoverable: install a browser later and the
+  # loop works with no further setup. CONFIG=written is what tells the agent
+  # that, rather than making it re-run setup and hit the same download.
+  echo "STATUS=install-failed STEP=browser-install CONFIG=written LOG=.claude/logs/setup.log"
+  exit 2
+fi
 
 echo "STATUS=ready VISUAL_DIR=.claude/visual LOG=.claude/logs/setup.log"

@@ -72,10 +72,31 @@ run_suite() {
   #
   # --run forces the single pass; --reporter=json + --outputFile are what make
   # the result machine-readable instead of scraped from console text.
-  npx --no -- vitest --run \
-      --config "$VIS/vitest.config.ts" \
-      --reporter=json --outputFile="$JSON_OUT" \
-      >>"$LOG" 2>&1
+  #
+  # Clearing CI is load-bearing. Under CI=1 Vitest refuses to write screenshot
+  # baselines, so `toMatchScreenshot` fails with "No existing reference
+  # screenshot found" — naming a path where the file demonstrably already is —
+  # on every run, forever. The seed-then-rerun dance below can never converge,
+  # and the failure carries no layout information to collect, so the run
+  # surfaces as `fail` with an empty failures list. This script is not a CI
+  # job; it is an inner-loop check that legitimately creates its own baselines,
+  # and any real CI (or an agent exporting CI=1 out of habit) would otherwise
+  # turn a sound layout into three wasted attempts and a fabricated
+  # "the design has a constraint" conversation with the user.
+  #
+  # Done with `unset` in a subshell rather than `env -u`, deliberately. This
+  # skill's primary target is macOS, whose /usr/bin/env is BSD, and relying on
+  # a flag whose availability differs between GNU and BSD builds to protect
+  # against a silent misdiagnosis would be trading one portability bug for
+  # another. `unset` is bash builtin behaviour and identical everywhere; the
+  # subshell keeps it from leaking into the rest of the script.
+  (
+    unset CI CONTINUOUS_INTEGRATION
+    npx --no -- vitest --run \
+        --config "$VIS/vitest.config.ts" \
+        --reporter=json --outputFile="$JSON_OUT" \
+        >>"$LOG" 2>&1
+  )
   return $?
 }
 
@@ -107,6 +128,18 @@ fi
 STATUS=$(node -e "process.stdout.write(require('$RESULT').status)" 2>/dev/null || echo unknown)
 ATTEMPTS=$(node -e "process.stdout.write(String(require('$RESULT').attempts))" 2>/dev/null || echo 0)
 COUNT=$(node -e "process.stdout.write(String(require('$RESULT').failures.length))" 2>/dev/null || echo 0)
+
+# A `fail` carrying zero failures is a contradiction, and it must never reach
+# the caller as a layout verdict. It means the suite failed for a reason the
+# collector could not parse into anything actionable — so there is nothing to
+# fix, no diff to look at, and no image to read. Reported as `fail` it costs an
+# attempt, and three of them walk the agent into rule 3's fallback: apologising
+# to a non-technical user about a design constraint on a layout that is fine.
+# `blocked-infra` sends it to the log instead, which is where the answer is.
+if [ "$STATUS" = "fail" ] && [ "$COUNT" -eq 0 ]; then
+  echo "STATUS=blocked-infra RC=$RC REASON=fail-without-failures LOG=.claude/logs/ui-validate.log"
+  exit 2
+fi
 
 case "$STATUS" in
   pass)    echo "STATUS=pass ATTEMPTS=0"; exit 0 ;;

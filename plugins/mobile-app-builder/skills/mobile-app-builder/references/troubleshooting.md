@@ -120,6 +120,56 @@ Better still, don't arrive here at Phase 3 at all. `doctor.sh` reports a
 access token it needs) while there's still time to get the token before it
 becomes a hard stop.
 
+**But check the verdict before you act on it — EAS Update is not always
+available either.** See the next section.
+
+## Egress is restricted: `api.expo.dev`, `dl.google.com` and friends are unreachable
+
+The case above assumes the shell can still reach *Expo*, even if it can't
+reach the phone. In a sandboxed session that assumption often fails too:
+network access is allowlisted, and the allowlist covers package registries
+(npm, PyPI, crates, Go) and GitHub while everything else returns a connection
+error or a proxy 403. Confirmed in a real session: `api.expo.dev`,
+`u.expo.dev`, `exp.host`, `dl.google.com`, `cdn.playwright.dev` and
+`docs.expo.dev` were all unreachable while `registry.npmjs.org` returned 200.
+
+`doctor.sh` probes `api.expo.dev` and reports `PREVIEW_DELIVERY=none` for
+this. When it does, the correct response is **not** to ask the user for an
+Expo access token — that route is gone too, and asking spends their attention
+on a task that cannot pay off. Symptoms, so you can recognise it without the
+doctor's help:
+
+- `check-expo-go-sdk.sh` warns it could not reach `api.expo.dev`.
+- `eas login` / `eas update` hang or fail at the network layer, not on auth.
+- `setup-visual-loop.sh` reports `STEP=browser-install` (blocked CDN).
+- Anything that fetches `docs.expo.dev` returns nothing — including the
+  instruction in the scaffold's own `AGENTS.md` to read the versioned docs
+  before writing code. That instruction is unsatisfiable here. Don't retry it:
+  build against stable APIs and lean on `tsc`, `ui-validate.sh`,
+  `flow-validate.sh` and a web export instead, which are the checks that
+  actually run offline.
+
+What still works, and is the plan to state plainly at Phase 1:
+
+1. **Build and verify normally.** Scaffolding, `npm install`, `tsc`, the
+   visual loop and the flow check all need only the npm registry.
+2. **Show, don't ship.** `npx expo export --platform web`, served locally and
+   driven in the visual loop's own Chromium at phone viewport, produces real
+   screenshots of the real app — including interactions and a reload to prove
+   persistence. Put those in the conversation; for a non-technical user
+   they're a genuine substitute for the phone in everything but native
+   fidelity.
+3. **Hand the project to the user's machine for the last step.** Their laptop
+   has LAN, QR, simulators and EAS. `npm install && npx expo start` and the
+   normal Phase 3 resumes there.
+
+Since `check-expo-go-sdk.sh` can't verify the store's Expo Go SDK in this
+state, pick the newest *stable* template tag and say why. Check publish dates
+(`npm view expo-template-default time --json`): a line several patch releases
+and a few weeks old is very likely supported by the store build already. Say
+which SDK you chose and give the one-line fallback, rather than presenting a
+guess as a check.
+
 ## "The QR code won't scan" / "Nothing happens on my phone"
 
 Almost always a network mismatch. Check, in order:

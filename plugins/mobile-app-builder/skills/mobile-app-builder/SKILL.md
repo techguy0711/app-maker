@@ -1,7 +1,7 @@
 ---
 name: mobile-app-builder
 description: Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, handling all the developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval — never exposing terminal output, jargon, or setup decisions to the user. Use whenever someone who isn't a programmer asks for an app to be built for them, wants help getting an app onto their phone, or asks about installing Xcode/Android Studio/dev tools for a mobile project. Built on top of the expo:* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client).
-version: 1.9.0
+version: 1.9.1
 license: MIT
 ---
 
@@ -61,7 +61,11 @@ numbers across the whole skill, so a cross-reference never needs translating.
   phone. Read the first two according to Phase 0.5; read the third always. If
   it says EAS Update, ask the user for an Expo access token **now** — it's the
   one thing on that path only they can do, and it costs them a minute here
-  versus a hard stop at Phase 3 with the whole app already built.
+  versus a hard stop at Phase 3 with the whole app already built. If it says
+  **none**, egress is restricted and Expo's API is unreachable too: ask for
+  nothing, say plainly at this phase that the phone step will happen on the
+  user's own machine, and plan to show them screenshots from a web export in
+  the meantime (`troubleshooting.md`, "Egress is restricted").
 - **Phase 2 — Scaffold the project, build the screens, and verify.** This
   branches on Phase 0.5's answer. **Path A:**
    run `scripts/check-expo-go-sdk.sh` *first* and scaffold at the SDK tag it
@@ -259,7 +263,9 @@ relevant to the phase you're in:
   anything itself; just tells you what's present so you know what (if
   anything) to act on. Reports two separate verdicts — what the Expo Go
   path needs and what a development-build path would need — since Phase
-  0.5 decides which one applies before this even runs.
+  0.5 decides which one applies before this even runs. Its third verdict,
+  preview delivery, is `lan`, `eas-update`, or `none`; `none` means Expo's
+  own API is unreachable from this shell, so the token ask is off too.
 - `scripts/check-expo-go-sdk.sh` — read-only check of which SDK the App
   Store/Play Store build of Expo Go currently supports, and the exact
   `create-expo-app` flag to scaffold at it. Run before every fresh scaffold

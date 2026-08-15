@@ -133,6 +133,54 @@ else
   esac
 fi
 
+# Routable-to and reachable-from are two different questions, and until now
+# only the first was asked. The LAN check above answers "can a phone reach this
+# shell"; it says nothing about whether *this shell* can reach Expo. A
+# restricted sandbox commonly fails both at once — no real LAN IP *and*
+# allowlisted egress — and in that case recommending EAS Update sends the agent
+# to ask the user for an access token that cannot possibly work. That is worse
+# than saying nothing: it spends the one thing only the user can give on a
+# route with no payoff. Probed only once the LAN route is already ruled out, so
+# the normal path still makes no network call.
+#
+# The URL is deliberately the same one check-expo-go-sdk.sh already uses. That
+# script's happy path parses `expoGoSdkVersion` out of this response, so the
+# endpoint is known-good against the live API — whereas a plausible-looking
+# guess (`/v2/versions`, no `/latest`) would fail `curl -f` on a 404 and report
+# "unreachable" on a perfectly healthy network, suppressing a token ask that
+# should have happened. Keep the two in sync; if one moves, move both.
+EXPO_PROBE_URL="${EXPO_PROBE_URL:-https://api.expo.dev/v2/versions/latest}"
+expo_api_reachable() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsS -o /dev/null --max-time 8 "$EXPO_PROBE_URL" >/dev/null 2>&1
+  elif command -v node >/dev/null 2>&1; then
+    node -e '
+      const t = setTimeout(() => process.exit(1), 8000);
+      require("https")
+        .get(process.argv[1], (r) => {
+          clearTimeout(t);
+          process.exit(r.statusCode && r.statusCode < 400 ? 0 : 1);
+        })
+        .on("error", () => { clearTimeout(t); process.exit(1); });
+    ' "$EXPO_PROBE_URL" >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
+if [ "$PREVIEW_DELIVERY" = "eas-update" ]; then
+  if expo_api_reachable; then
+    echo "[OK]      api.expo.dev is reachable — the EAS Update fallback is viable."
+  else
+    echo "[WARN]    api.expo.dev is NOT reachable from this shell either."
+    echo "          Egress is restricted here (sandbox allowlist, proxy, or"
+    echo "          simply offline). EAS Update publishes through that API, so"
+    echo "          the fallback route is unavailable too. Do NOT ask the user"
+    echo "          for an access token — see the preview-delivery verdict."
+    PREVIEW_DELIVERY="none"
+  fi
+fi
+
 if [ -n "${EXPO_TOKEN:-}" ]; then
   echo "[OK]      EXPO_TOKEN is set — non-interactive EAS auth is available."
 else
@@ -255,6 +303,32 @@ case "$PREVIEW_DELIVERY" in
     echo "can't reach the phone at all'. Run verify-expo-go-update.sh before"
     echo "handing over a QR code — a successful publish is not evidence the"
     echo "phone can load it."
+    ;;
+  none)
+    echo "NONE — this shell cannot put a preview on the phone by any route."
+    echo "LAN and tunnel are structurally unavailable (no routable address to"
+    echo "this machine), and api.expo.dev is unreachable, so EAS Update is out"
+    echo "as well. All three of Phase 3's options are gone."
+    echo ""
+    echo "DO NOT ASK FOR AN EXPO ACCESS TOKEN. It changes nothing from here,"
+    echo "and asking spends the user's attention on a task with no payoff."
+    echo ""
+    echo "What does still work, and is worth saying out loud early:"
+    echo "  1. Everything up to Phase 3 runs fine offline. Scaffolding, tsc,"
+    echo "     ui-validate.sh and flow-validate.sh all work against the npm"
+    echo "     registry alone. A web export ('npx expo export --platform web')"
+    echo "     rendered in the visual loop's own Chromium gives you real"
+    echo "     screenshots of the real app to show the user in conversation —"
+    echo "     that is the substitute for the phone here, and it is a decent"
+    echo "     one for everything except native fidelity."
+    echo "  2. The phone step moves to the user's own machine, where LAN, QR,"
+    echo "     simulators and EAS all behave normally:"
+    echo "       npm install && npx expo start"
+    echo ""
+    echo "Tell the user this at Phase 1, in one plain sentence — that they'll"
+    echo "run the last step themselves and you'll show them pictures until"
+    echo "then. A non-technical user who is waiting for a QR code that was"
+    echo "never coming reads the silence as the thing being broken."
     ;;
 esac
 hr

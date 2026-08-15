@@ -12,6 +12,28 @@ ARCH="$(uname -m)"
 hr() { printf '%s\n' "----------------------------------------"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# Same lookup make-preview-qr.sh uses, so Phase 1 and Phase 3 can never
+# disagree about whether this machine has a routable address.
+get_lan_ip() {
+  local ip=""
+  if command -v ipconfig >/dev/null 2>&1; then
+    for iface in en0 en1 en2; do
+      ip="$(ipconfig getifaddr "$iface" 2>/dev/null || true)"
+      [ -n "$ip" ] && break
+    done
+  fi
+  if [ -z "$ip" ] && command -v ip >/dev/null 2>&1; then
+    ip="$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i=1;i<=NF;i++) if ($i=="src") print $(i+1)}')"
+  fi
+  if [ -z "$ip" ] && command -v hostname >/dev/null 2>&1; then
+    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  fi
+  if [ -z "$ip" ]; then
+    ip="$(ifconfig 2>/dev/null | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}' | head -1)"
+  fi
+  echo "$ip"
+}
+
 echo "=== System ==="
 echo "OS:   $OS"
 echo "Arch: $ARCH"
@@ -74,6 +96,49 @@ else
   echo "[MISSING] eas-cli (needed for cloud builds / app store submission)"
 fi
 echo "[OK]      npx expo   (no install needed — runs on demand via npx)"
+hr
+
+echo "=== Network: can this shell reach the user's phone? ==="
+# WHY THIS IS HERE AND NOT IN TROUBLESHOOTING: the answer decides how Phase 3
+# delivers the app, it is knowable right now, and the fallback route needs an
+# access token only the user can create. Found at Phase 1 it's a question asked
+# while the app is being built. Found at Phase 3 it's a hard stop with every
+# screen already written — which is exactly how it went in a real session.
+LAN_IP="$(get_lan_ip)"
+PREVIEW_DELIVERY="lan"
+
+if [ -z "$LAN_IP" ]; then
+  echo "[WARN]    No LAN IP address found."
+  echo "          An ordinary desktop always has one. Its absence means this"
+  echo "          shell is almost certainly not on the user's own network."
+  PREVIEW_DELIVERY="eas-update"
+else
+  case "$LAN_IP" in
+    192.0.2.*|198.51.100.*|203.0.113.*)
+      echo "[WARN]    LAN IP is $LAN_IP — RFC 5737 TEST-NET."
+      echo "          Those three ranges are reserved for documentation and can"
+      echo "          never be a real host, so nothing can route to a phone from"
+      echo "          here. This is a sandboxed or remote session."
+      PREVIEW_DELIVERY="eas-update"
+      ;;
+    127.*|169.254.*)
+      echo "[WARN]    LAN IP is $LAN_IP — loopback/link-local, not reachable"
+      echo "          from any other device."
+      PREVIEW_DELIVERY="eas-update"
+      ;;
+    *)
+      echo "[OK]      LAN IP $LAN_IP — a phone on the same Wi-Fi can reach this"
+      echo "          machine."
+      ;;
+  esac
+fi
+
+if [ -n "${EXPO_TOKEN:-}" ]; then
+  echo "[OK]      EXPO_TOKEN is set — non-interactive EAS auth is available."
+else
+  echo "[MISSING] EXPO_TOKEN is not set. Only needed if preview delivery falls"
+  echo "          back to EAS Update — see the preview-delivery verdict below."
+fi
 hr
 
 echo "=== iOS (macOS only) ==="
@@ -157,6 +222,41 @@ echo ""
 echo "Only chase the other [MISSING] items on this path if the user"
 echo "specifically wants a local on-screen simulator/emulator instead of"
 echo "using their own phone."
+hr
+
+echo "=== Verdict: preview delivery (how Phase 3 gets the app onto the phone) ==="
+case "$PREVIEW_DELIVERY" in
+  lan)
+    echo "LAN — the normal route, and the fast one."
+    echo "  npx expo start, then make-preview-qr.sh <port>. The phone and this"
+    echo "  machine have to be on the same Wi-Fi. If a scan fails, try"
+    echo "  'npx expo start --tunnel' next — not EAS Update; a tunnel is much"
+    echo "  cheaper and needs no account."
+    ;;
+  eas-update)
+    echo "EAS Update — LAN and tunnel are both structurally unavailable here."
+    echo "Don't spend any of Phase 3 trying them. They cannot work from this"
+    echo "shell, and confirming that by trial and error only costs the user a"
+    echo "wait for something that was never going to succeed."
+    echo ""
+    echo "ASK FOR THE TOKEN NOW, NOT AT PHASE 3. This route authenticates with"
+    echo "an Expo access token, and only the user can create one. Asking while"
+    echo "the app is still being built costs them a minute; leaving it until"
+    echo "Phase 3 makes it a hard stop with every screen already written."
+    echo ""
+    echo "  Say roughly: \"One thing only you can do, whenever you get a"
+    echo "  minute — go to expo.dev, sign in (free), open Settings then Access"
+    echo "  Tokens, click Create token, and paste it back to me. I'll keep"
+    echo "  building meanwhile.\""
+    echo ""
+    echo "  Then: export EXPO_TOKEN=\"<what they paste>\""
+    echo ""
+    echo "Full command sequence: build-flow.md Phase 3, 'When the dev server"
+    echo "can't reach the phone at all'. Run verify-expo-go-update.sh before"
+    echo "handing over a QR code — a successful publish is not evidence the"
+    echo "phone can load it."
+    ;;
+esac
 hr
 
 echo "=== Verdict: development-build path (Phase 0.5 said this app needs one) ==="

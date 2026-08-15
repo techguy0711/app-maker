@@ -45,6 +45,12 @@ export default defineConfig({
       // error before any screen renders. Confirmed against a real app using
       // @expo/vector-icons — every screen failed to even start rendering.
       { find: /^@expo\/vector-icons(\/.*)?$/, replacement: stubs },
+      // Same failure, different package: untranspiled JSX in `build/*.js`, so
+      // the optimizer dies with `PARSE_ERROR: Unexpected JSX expression`
+      // before any screen renders. Confirmed on a real app. Any package whose
+      // parse error names a file under `node_modules/…/build/` belongs here —
+      // alias it, don't remove it from the app.
+      { find: /^expo-linear-gradient$/, replacement: stubs },
       // Screens are rendered on their own, with no navigator mounted above
       // them, so router internals have to be stood in for too.
       { find: /^expo-router(\/.*)?$/, replacement: stubs },

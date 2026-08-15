@@ -19,6 +19,14 @@
  * "does not provide an export named 'X'" in .claude/visual/last-run.json.
  * That message is the fix instruction: add the missing name here. Don't
  * chase it as a layout bug.
+ *
+ * DEFAULT imports get no such message, which is why the default export at the
+ * bottom of this file is a callable component and not a plain object. A screen
+ * doing `import Icon from '@expo/vector-icons/MaterialCommunityIcons'` binds
+ * whatever the default is; if that's an object literal, React throws "Element
+ * type is invalid… but got: object", which surfaces in last-run.json as a
+ * locator timeout on `visual-root` — indistinguishable from a layout failure
+ * unless you already know to look. Keep the default callable.
  */
 import * as React from 'react';
 
@@ -93,6 +101,13 @@ export const ScreenContainer = PassThrough('ScreenContainer');
 export const Screen = PassThrough('Screen');
 export const GestureHandlerRootView = PassThrough('GestureHandlerRootView');
 export const GestureDetector = PassThrough('GestureDetector');
+// Swipe-to-delete rows. Pass-throughs, not stub boxes: the row *inside* a
+// swipeable is exactly the content worth measuring, and a placeholder would
+// hide it from the checks. `ReanimatedSwipeable` is the current API and is
+// usually imported as a default from its own subpath — see the default export
+// at the bottom of this file for why that matters.
+export const Swipeable = PassThrough('Swipeable');
+export const ReanimatedSwipeable = PassThrough('ReanimatedSwipeable');
 export const Gesture = {
   Pan: () => ({ onUpdate: () => Gesture.Pan(), onEnd: () => Gesture.Pan() }),
   Tap: () => ({ onEnd: () => Gesture.Tap() }),
@@ -135,6 +150,23 @@ export const Foundation = IconStub('Foundation');
 export const Octicons = IconStub('Octicons');
 export const SimpleLineIcons = IconStub('SimpleLineIcons');
 export const Zocial = IconStub('Zocial');
+
+// --- expo-linear-gradient ---------------------------------------------------
+// A gradient is a *background*, so unlike SafeAreaView this one keeps the style
+// it was handed instead of dropping it: the box is frequently real layout (a
+// decorative band with an explicit height) and the children are real content.
+// Neither a plain PassThrough nor a NativeStub is right — the first loses the
+// height, the second hides the children.
+export const LinearGradient = ({ children, style, ...rest }: AnyProps & { style?: unknown }) =>
+  React.createElement(
+    'div',
+    {
+      'data-passthrough': 'LinearGradient',
+      style: { display: 'flex', flexDirection: 'column', ...(style as object) },
+      ...(rest as object),
+    },
+    children as React.ReactNode,
+  );
 
 // --- expo-audio -----------------------------------------------------------
 export const setAudioModeAsync = async () => {};
@@ -215,11 +247,55 @@ export const NotificationFeedbackType = { Success: 'success', Warning: 'warning'
 export const useCameraPermissions = () =>
   [{ granted: true, status: 'granted' }, async () => ({ granted: true })] as const;
 
-// Default export, for modules imported as `import X from 'expo-...'`.
-export default {
+/**
+ * Default export, for modules imported as `import X from '…'`.
+ *
+ * This MUST be callable. An object literal here renders nothing and reports
+ * nothing: React throws "Element type is invalid… but got: object", which
+ * reaches last-run.json as a locator timeout on `visual-root` and reads like a
+ * layout failure. Two ordinary imports hit it in a single real build —
+ *
+ *   import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons'
+ *   import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable'
+ *
+ * — and those two want opposite shapes. An icon wants an inline glyph sized to
+ * its `size` prop; a swipeable wants a transparent wrapper whose children are
+ * the part worth measuring. Either fixed choice gets the other badly wrong: a
+ * `flex: 1` wrapper standing in for an icon expands to fill its row, and an
+ * inline glyph standing in for a swipeable hides the row inside it.
+ *
+ * So it branches on what it is handed — children means wrapper, no children
+ * means glyph — and carries the named exports as properties so `<X.Button />`
+ * keeps working alongside `<X />`.
+ */
+const DefaultStub = ({
+  children,
+  size = 24,
+  style,
+  ...rest
+}: AnyProps & { size?: number; style?: unknown }) =>
+  children != null
+    ? React.createElement(
+        'div',
+        {
+          'data-passthrough': 'DefaultStub',
+          style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 },
+          ...(rest as object),
+        },
+        children as React.ReactNode,
+      )
+    : React.createElement('span', {
+        'data-native-stub': 'DefaultStub',
+        style: { display: 'inline-block', width: size, height: size, ...(style as object) },
+        ...(rest as object),
+      });
+DefaultStub.displayName = 'DefaultStub';
+
+export default Object.assign(DefaultStub, {
   Host, Button, Switch, Picker, Slider, DateTimePicker, BottomSheet,
   ContextMenu, Section, Form, HStack, VStack, Text, Image, SymbolView,
-  BlurView, CameraView, StatusBar,
+  BlurView, CameraView, StatusBar, LinearGradient,
+  Swipeable, ReanimatedSwipeable,
   impactAsync, notificationAsync, selectionAsync,
   ImpactFeedbackStyle, NotificationFeedbackType,
-};
+});

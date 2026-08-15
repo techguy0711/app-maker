@@ -13,6 +13,41 @@ Ask in plain language, one or two questions at a time, not a form:
 Don't ask about tech stack, navigation patterns, state management, etc. — that's
 your job to decide, not theirs. See `plain-language.md` for phrasing rules.
 
+### Porting an existing app
+
+"Here's a working app in another language, port it" is a different job from
+either half of this phase — Phase 0 is a conversation about an idea, Phase 2
+scaffolds fresh, and neither fits. It's a common ask and it has its own rules.
+
+**Where the original goes.** Keep it. Move the source into a clearly named
+directory (`ios-native-original/`, `android-original/`) rather than deleting
+it. It is the specification for everything you're about to write, it costs
+nothing to keep, and its absence is only noticed at the moment it's most
+expensive.
+
+**Verify the backend still answers before writing a line.** A working app with
+a dead API is the normal case for anything more than a few months old, and it
+is a genuinely nasty trap: you write correct code, see an empty screen, and
+spend an hour debugging yourself. Confirmed the hard way — an original's
+RapidAPI subscription had lapsed and returned 403, and its free replacement
+returned a single item where the paid tier had returned a list, which changes
+the shape of the screen, not just the endpoint. `curl` the endpoints the
+original uses, first thing. If one is dead, say so and settle the replacement
+with the user before building against it.
+
+**Carry the app icon and assets across.** They already exist and they're a
+large part of why the port feels like the same app.
+
+**The fidelity rule: faithful by default.** Port structure and behaviour as
+they are. Deviate only where the platform forces it, or where the original had
+a real bug — and *state every deviation* rather than quietly making it. The
+user knows their app; a silent "improvement" reads as a port that got it
+wrong, and they can't tell which of your changes were deliberate.
+
+**Then rejoin the normal flow at Phase 0.5.** A port is subject to exactly the
+same Expo Go gate as anything else, and the original being native tells you
+nothing either way — most ports of ordinary apps fit Path A fine.
+
 ## Phase 0.5 — Does this fit Expo Go?
 
 Decide this right after the Phase 0 conversation, before Phase 1 or Phase 2.
@@ -69,11 +104,39 @@ category they're in.
   through what that involves before we start." Then read Phase 3's Path B
   section before Phase 1 — it changes what Phase 1 needs to check for.
 
+**One thing this gate does *not* settle: Expo Go's own bugs.** Everything above
+treats Expo Go as a fixed set of native modules — either your app's features
+are inside it or they aren't. But it's also a fixed *binary*, and its own UI
+chrome can be broken on a given OS version regardless of what your app does.
+Path A is the low-risk path and stays the default; this is its one structural
+risk, and it lands on the user's device where you can't see it.
+
+The running list is in `troubleshooting.md` under **Known Expo Go
+divergences** — currently the iOS 26 native-nav-bar hit-testing failure, which
+is live right now and whose obvious workaround (a custom `headerLeft`) does not
+work. Read it before concluding a dead control is your own code, and add to it
+when you find a new one.
+
 ## Phase 1 — Check the environment
 
 Run `scripts/doctor.sh`. Do this once per machine/session, not once per app.
-It reports two separate pictures — what the Expo Go path needs and what a
-dev-build path would need — read whichever one Phase 0.5 says applies here.
+It reports three verdicts — what the Expo Go path needs, what a dev-build path
+would need, and how Phase 3 will actually deliver the app to the phone. Read
+the first two according to what Phase 0.5 decided; read the third one always.
+
+**If the preview-delivery verdict says EAS Update, act on it in this phase,
+not in Phase 3.** It means the shell you're running commands in isn't on the
+user's network — no LAN IP at all, or one inside RFC 5737's TEST-NET ranges,
+which can never be a real host. Neither the QR flow nor `--tunnel` can work
+from there, and the fallback that does work authenticates with an Expo access
+token only the user can create (`environment-setup.md`, USER MUST CLICK).
+
+Ask for it now, in the same breath as anything else you need from them, and
+keep building while they fetch it. This is the whole point of checking at
+Phase 1: a minute of their time here, versus a hard stop at Phase 3 with every
+screen already written and nothing to show them. That is not hypothetical —
+it's precisely how one real session went, and the signal (`192.0.2.2`, a
+documentation-only address) was sitting there in Phase 1 the entire time.
 
 **If Phase 0.5 said Expo Go fits** (the default path): only Node.js, npm,
 and git are strictly needed — call out anything else missing from Core
@@ -94,6 +157,12 @@ timeline up front, in this same conversation, rather than after the fact.
 
 **This step branches on Phase 0.5's answer — don't run it the same way for
 both paths.**
+
+If this is a port (see "Porting an existing app" in Phase 0), everything below
+still applies unchanged — scaffold fresh, strip the demo content, then build
+the screens *from the original* rather than from a conversation. The original
+source stays in its own directory beside the new app; it has no `.ts`/`.tsx` in
+it, so the app map and `tsc` ignore it on their own.
 
 **Path A (fits Expo Go):** first, always run `scripts/check-expo-go-sdk.sh`.
 `npx create-expo-app@latest` by itself always grabs the newest SDK, but the
@@ -366,6 +435,30 @@ Two behaviours that are easy to get wrong and expensive when you do:
   `attempts: 3` genuinely means "the same thing failed three times", which
   is what makes the fallback below trustworthy.
 
+**Gate 2 says nothing whatsoever about navigation.** Its config aliases
+`expo-router` to the stubs and renders every screen alone, so `router.push` is
+a no-op and there is no navigator above anything. A back button that does
+nothing passes this gate every time.
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/flow-validate.sh     # the other half
+```
+
+That builds the web export, serves it, and drives the **real** router in the
+Chromium `setup-visual-loop.sh` already installed — no new dependency, just
+the half that was already sitting there unused. It reports, per route, whether
+a user can go somewhere and come back:
+
+```
+  /            after back: /            ✓
+  /favorites   after back: /favorites   ✓
+  /search      after back: /search      ✓
+```
+
+It is not part of the per-edit loop — the export costs about a minute. Run it
+when navigation changed, before Phase 3's handoff, and any time a control is
+reported as unresponsive.
+
 ### When it's `blocked`: the non-technical fallback
 
 Three attempts at the same failure means the layout isn't going to work.
@@ -513,42 +606,99 @@ the user's end.
 **The fallback: EAS Update.** Instead of the phone connecting to a server
 this machine hosts, publish the JS bundle to Expo's own cloud and have
 Expo Go load it from there — no locally-hosted server or tunnel involved at
-all:
+all.
+
+This path is **verified end-to-end** (a SwiftUI→Expo port on SDK 54, run from
+a remote cloud session, Aug 2026). Every line below is load-bearing, and the
+three obvious ways to shorten it all fail:
 
 ```bash
-eas login                # one-time; free Expo account, USER MUST CLICK if
-                          # they don't have one yet — see environment-setup.md
-eas update:configure      # one-time per project; links it to EAS and wires
-                          # up expo-updates
-eas update --branch preview --message "preview"
+export EXPO_TOKEN="…"   # from the user — see environment-setup.md. `eas login`
+                        # is interactive and cannot work in a remote session;
+                        # the token is the only non-interactive auth path.
+
+eas init --non-interactive --force
+eas update:configure --non-interactive
+eas channel:create preview --non-interactive
+EXPO_GO_PREVIEW=1 eas update --branch preview --message "preview"
 ```
 
-**This path is new and not yet verified end-to-end in a real session** —
-unlike the rest of this file, treat it as a starting point, not a
-tested recipe. Before relying on it:
-- `eas update:configure` may prompt interactively the first time (creating
-  the EAS project record if one doesn't exist yet); if it hangs with no
-  output in a non-interactive shell, that's very likely what's happening —
-  same shape of problem as the git-init prompt in Phase 2, and worth
-  resolving the same way (check whether it needs a value you can supply as
-  a flag instead of an interactive answer).
-- The exact command output for the Expo-Go-openable link — and whether
-  `eas update` prints it as plain text or only through a TTY-gated
-  interactive UI (the same trap `expo start`'s own QR falls into, see
-  above) — needs confirming fresh; check `eas update --help` and pass
-  `--json` if the plain-text form doesn't show it. Once you have the URL,
-  reuse the existing script rather than building a new QR renderer —
-  `make-preview-qr.sh` now accepts a full URL as well as a bare port:
-  ```bash
-  ${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh "<url eas update printed>" /tmp/preview-qr.png
-  ```
-- This does **not** live-reload. Expo Go loads whatever was last published,
-  and typically only re-checks on a fresh app open/foreground — after every
-  code change in Phase 4, you need to re-run `eas update` and tell the user
-  to close and reopen the app, not just wait for it to refresh itself.
-- Confirm the resulting QR/link actually opens the app in Expo Go before
-  telling the user it's ready, same as any other Path B-style verification
-  step — don't hand this to the user on faith the first time it's used.
+Why each of those, in the order they bite:
+
+- **`eas init --force` first, and don't skip it.** Starting at
+  `update:configure` skips creating the EAS project record, and `eas init`
+  without `--force` refuses in non-interactive mode with *"Project does not
+  exist"*.
+- **A branch is not a channel.** `eas update --branch preview` creates a
+  *branch*; Expo Go asks for a *channel*. Without an explicit
+  `eas channel:create`, the manifest endpoint 404s with *"There is no channel
+  named preview"*.
+- **The runtime version `update:configure` writes is one Expo Go can never
+  load.** It sets `{"policy":"appVersion"}`, which stamps updates `1.0.0`.
+  Expo Go only ever asks for `exposdk:NN.0.0`. The mismatch answers **HTTP 204
+  No Content** — not an error. Everything on your side reports success,
+  `✔ Published!` included, and the failure exists only on the user's phone:
+  the QR scans, Expo Go opens, nothing happens.
+
+That last one is what `EXPO_GO_PREVIEW=1` is for. Add an `app.config.js` that
+publishes the runtime version Expo Go actually asks for when that variable is
+set, while keeping `appVersion` for real store builds:
+
+```js
+// app.config.js — app.json still holds the config; this wraps it.
+// Deriving the SDK number beats hardcoding it: a stale literal here
+// reintroduces the silent 204 the next time the project moves SDK.
+const SDK_MAJOR = require('./package.json').dependencies.expo.match(/\d+/)[0];
+
+export default ({ config }) => ({
+  ...config,
+  runtimeVersion: process.env.EXPO_GO_PREVIEW
+    ? `exposdk:${SDK_MAJOR}.0.0`   // what Expo Go asks for
+    : { policy: 'appVersion' },    // correct for EAS Build / store releases
+});
+```
+
+Both can live on one branch — EAS serves each client the newest update
+matching that client's own runtime version, so a preview publish and a store
+build don't collide.
+
+**Then confirm the phone will actually get a bundle, before you say a word to
+the user:**
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/verify-expo-go-update.sh . preview
+```
+
+That asks `u.expo.dev` with exactly the headers Expo Go sends, and tells you
+200 (the phone will load it), 204 (runtime mismatch) or 404 (no channel). It
+is the only thing standing between "the CLI said Published!" and the user
+scanning a QR code that can never work. Don't skip it because the publish
+looked clean — a clean publish is exactly what this failure looks like.
+
+Only once that passes, build the QR. `make-preview-qr.sh` accepts a full URL
+as well as a bare port, so no new renderer is needed:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh "<update URL>" /tmp/preview-qr.png
+```
+
+Take the URL from `eas update`'s output where it prints one. If you have to
+build it yourself, the manifest URL is
+`https://u.expo.dev/<projectId>?channel-name=preview` (the same `<projectId>`
+that `app.json`'s `expo.updates.url` ends with), and Expo Go opens that same
+URL under the `exp://` scheme. Whichever way you get it, the verifier above —
+not the URL's shape — is what tells you it works.
+
+Two things that remain true on this path:
+
+- **It does not live-reload.** Expo Go loads whatever was last published, and
+  typically only re-checks on a fresh app open/foreground. After every code
+  change in Phase 4, re-run the `eas update` line *and* tell the user to close
+  and reopen the app — don't let them sit waiting for a refresh that isn't
+  coming.
+- `eas update:configure --non-interactive` does **not** hang. An earlier
+  version of this doc warned that it might; it doesn't. If something in this
+  sequence does hang, it's an auth prompt — check `EXPO_TOKEN` is exported.
 
 ### Path B — development build preview
 
@@ -687,6 +837,28 @@ the change you were asked to make.
 If it comes back `blocked`, use the same plain-language fallback and record
 the constraint — an iteration hitting a wall gets handled identically to a
 first build hitting one.
+
+**The bugs in this phase are not the bugs in Phase 2.** Once the app is on the
+phone, everything left is a *runtime* problem, reported in one sentence by
+someone who cannot see a stack trace and has no vocabulary for what they're
+seeing. Neither gate above covers that: `tsc` sees types, `ui-validate.sh` sees
+geometry, and a control that does nothing at all is invisible to both.
+
+Two things keep this phase bounded, and they are the two most valuable habits
+in the skill:
+
+- **`troubleshooting.md` → "A control doesn't respond, but the app otherwise
+  works."** Start with the discriminating question — *does it do nothing, or
+  the wrong thing?* — before writing a line of code. It splits the search space
+  in half for the cost of one sentence.
+- **Validation-loop rule 5.** When a bug shows on some screens and not others,
+  enumerate what differs before editing. Get that observation before the
+  *second* fix, not the third. Three round-trips on one back button is the
+  documented cost of skipping it.
+
+And run `flow-validate.sh` rather than reasoning about navigation from the
+source. It's about ten minutes of work already done for you, and it turns "back
+is broken" into a table.
 
 ## Phase 5 — Ship it
 

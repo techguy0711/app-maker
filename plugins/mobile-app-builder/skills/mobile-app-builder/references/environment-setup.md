@@ -37,6 +37,23 @@ npm install -g eas-cli
 ```
 Note: `npx expo` never needs installing — it downloads the right version on demand per project.
 
+**Expo access token** — **USER MUST CLICK** (free account, but only they can create the token).
+
+Needed whenever EAS has to run non-interactively — which is every remote/cloud session, because `eas login` is interactive and cannot be driven from a shell the user isn't sitting at. `doctor.sh`'s **preview delivery** verdict tells you at Phase 1 whether this applies; it is not a Phase 3 concern, and treating it as one turns a one-minute request into a hard stop with the whole app already built.
+
+Exact path to give them, one step at a time:
+1. Go to **expo.dev** and sign in (creating the account is free).
+2. Open **Settings → Access Tokens**.
+3. Click **Create token**, name it anything, and copy it.
+4. Paste it back into the chat.
+
+Then:
+```bash
+export EXPO_TOKEN="<what they pasted>"
+```
+
+Treat the value as a credential: don't echo it back, don't write it into `app.json`, `eas.json`, or any file that gets committed. Export it in the shell and let EAS read it from the environment.
+
 ## iOS (macOS only — there is no Windows/Linux equivalent)
 
 **Xcode Command Line Tools** — AUTO to *kick off*, but **USER MUST CLICK** to finish. Running this pops a native macOS dialog; the user has to click "Install" and accept a license themselves. You cannot click it for them.

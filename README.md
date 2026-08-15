@@ -78,13 +78,24 @@ at the repo root is what makes `/plugin marketplace add` work.
    content and drops to a clean single-screen stack.
 5. The real screens get built using Expo's own skills (routing, native UI,
    data fetching).
-6. `npx tsc --noEmit` must pass before anything is shown to the user.
-7. `scripts/make-preview-qr.sh` builds a scannable connection code so the
+6. `npx tsc --noEmit` and `scripts/ui-validate.sh` must both pass before
+   anything is shown to the user — the second renders every screen headless
+   at phone size and checks real geometry, so "it looks weird" never has to
+   be the user's job to report.
+7. `scripts/flow-validate.sh` drives the real router in a browser and checks
+   that a user can get from screen to screen *and back*. The layout check
+   deliberately can't cover this — it stubs the router out — so a broken back
+   button passes every other check in the skill.
+8. `scripts/make-preview-qr.sh` builds a scannable connection code so the
    user can preview the app live on their own phone via the free Expo Go
-   app — no simulator, no local Xcode/Android Studio required.
-8. Iterate on feedback in plain language.
-9. Shipping to the actual App Store/Play Store goes through EAS Build (cloud
-   compilation, still no local native SDKs).
+   app — no simulator, no local Xcode/Android Studio required. When the
+   session can't reach the user's network at all (a cloud session, say),
+   `scripts/verify-expo-go-update.sh` confirms the cloud-published bundle
+   will actually load before a QR code is handed over — that path fails
+   silently otherwise.
+9. Iterate on feedback in plain language.
+10. Shipping to the actual App Store/Play Store goes through EAS Build (cloud
+    compilation, still no local native SDKs).
 
 Every one of those steps encodes something that broke in real testing and
 got fixed — see

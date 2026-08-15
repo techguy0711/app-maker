@@ -111,8 +111,14 @@ Don't debug this as a network misconfiguration on the user's end — it isn't
 one. Skip straight to the EAS Update fallback in `build-flow.md`'s "When the
 dev server can't reach the phone at all." That path publishes the JS bundle
 to Expo's cloud instead of hosting it from this machine, so no tunnel or LAN
-reachability is needed. It's newly added and not yet verified end-to-end in
-a real session — read the caveats there before relying on it blindly.
+reachability is needed. It is verified end-to-end; follow its command sequence
+exactly, and run `scripts/verify-expo-go-update.sh` before handing over a QR
+code — a successful publish is not evidence the phone can load it.
+
+Better still, don't arrive here at Phase 3 at all. `doctor.sh` reports a
+**preview delivery** verdict at Phase 1, and it names this case (and the Expo
+access token it needs) while there's still time to get the token before it
+becomes a hard stop.
 
 ## "The QR code won't scan" / "Nothing happens on my phone"
 
@@ -315,11 +321,30 @@ Common causes, in the order they actually occur:
 - **`Flow is not supported` / a parse error inside `node_modules/react-native/Libraries/…`** — the single most likely failure after adding a dependency. Packages that ship React Native *native component specs* (`react-native-safe-area-context`, `-screens`, `-gesture-handler`, `-reanimated`, and most `react-native-*` wrappers) deep-import Flow-typed React Native source. Vite's parser rejects Flow outright, so one such import kills the entire run before a single screen renders. Aliasing bare `react-native` to `react-native-web` does *not* cover it — the import is a deep path, not the bare name. Add the package to the stub aliases in `templates/vitest.config.ts` and give it exports in `templates/expo-stubs.tsx`. Confirmed on a stock SDK 57 scaffold, whose default screen uses safe-area-context. Wrappers whose only job is insets or gesture plumbing should stub as pass-through containers, not placeholder boxes — a placeholder would hide their children from the layout checks, and the children are the part worth checking.
 - **`[PARSE_ERROR] Unexpected JSX expression` inside `node_modules/@expo/vector-icons/build/*.js`** — that package ships untranspiled JSX in its `build/` output, relying on Metro's transformer to handle it; Vite's esbuild/rolldown optimizer chokes on raw JSX in a plain `.js` file and kills the whole run before any screen renders. Confirmed on a real app using `Ionicons` from `@expo/vector-icons` — every screen failed at once. Fix is the same shape as the Flow case above: alias `@expo/vector-icons` to the stubs in `templates/vitest.config.ts` and add icon-set exports (`Ionicons`, `MaterialIcons`, etc.) to `templates/expo-stubs.tsx`, sized to the `size` prop rather than a fixed box so icons don't blow up small inline layouts (chevrons in a row, a glyph inside a round button). Already fixed in the shared templates as of Aug 2026 — if it recurs, a new icon family is being imported that isn't in the stub list yet.
 - **`[MISSING_EXPORT] "X" is not exported by "node_modules/react-native-web/dist/index.js"` (e.g. `TurboModuleRegistry`), traced back to `expo-modules-core/src/requireNativeModule.ts`** — happens with Expo modules that *do* have a real web implementation (confirmed with `expo-audio`, which has a genuine HTML5-audio-backed `.web` build) but whose universal entry point still imports `expo-modules-core`'s native-module bridge unconditionally. That bridge references React Native internals `react-native-web` doesn't export, and Vite's dependency optimizer fails on it during its pre-scan, before platform-specific resolution ever gets a chance to pick the `.web` file. The fix isn't "make the web build work" — it's the same stub-alias pattern as everything else here: add the module to `templates/vitest.config.ts`'s alias list and give it a fake hook/function shape in `templates/expo-stubs.tsx` (for `expo-audio`: no-op `setAudioModeAsync`, and `useAudioPlayer`/`useAudioPlayerStatus` returning static idle state). Already fixed for `expo-audio`; the same signature from a different package means that package needs the same treatment.
+- **Any `[PARSE_ERROR]` naming a file under `node_modules/…/build/`** — the
+  general form of the `@expo/vector-icons` case above: the package ships
+  untranspiled JSX in its published `build/` output and relies on Metro to
+  transform it. Confirmed a second time with `expo-linear-gradient` (now
+  aliased in the template too). **The fix is one alias line, not removing the
+  dependency from the app** — that instinct is wrong and costs a rewrite of
+  working code. Add it to `templates/vitest.config.ts` and give it exports in
+  `templates/expo-stubs.tsx`.
 - **`does not provide an export named 'X'`** — a screen imports something
   from a native-only Expo module that `templates/expo-stubs.tsx` doesn't
   stand in for yet. ES modules resolve named exports at transform time, so
   this can't be faked dynamically. Add the export to the template, re-copy
   it to `.claude/visual/expo-stubs.tsx`, re-run. One-line fix.
+- **A locator timeout on `visual-root` with no layout error to go with it** —
+  the screen rendered *nothing*, and the usual cause is a **default** import
+  resolving to a stub that isn't callable. Named exports fail loudly; default
+  imports don't — React throws "Element type is invalid… but got: object" and
+  what reaches `last-run.json` is a timeout that reads like a layout problem.
+  Confirmed with two ordinary imports in one build:
+  `@expo/vector-icons/MaterialCommunityIcons` (the per-icon subpath form) and
+  `react-native-gesture-handler/ReanimatedSwipeable`. The template's default
+  export is callable as of Aug 2026; if this recurs, check the aliased package
+  actually resolves to `expo-stubs.tsx` and that the screen isn't importing a
+  default the stub renders as an empty glyph when it should be a wrapper.
 - **Every screen reports `empty-render`** — the phone-sized `Frame` wrapper
   isn't applying, so `flex: 1` roots collapse to zero height. Regenerate the
   tests (`ui-validate.sh` does this automatically) rather than hand-editing
@@ -349,6 +374,63 @@ headless-mode differences make screenshots from a different computer
 inherently mismatched — if the project moves machines, delete
 `__screenshots__/` wholesale and let it reseed rather than debugging a wall
 of failures that mean nothing.
+
+## A control doesn't respond, but the app otherwise works
+
+The app is on the phone, everything renders, and one button, tab or back arrow
+does nothing. Every other entry in this file is a *setup* failure — this is the
+runtime category, and it is what all of Phase 4 is made of. Nothing here can be
+diagnosed from a log, because there isn't one: the user's whole report will be
+one sentence.
+
+**Ask the discriminating question first, outright, before touching code:**
+
+> "When you tap it — does nothing happen at all, or does it do the wrong thing?"
+
+Those two answers point in opposite directions, and it's the cheapest
+information available anywhere in this phase:
+
+- **Nothing at all** → the press isn't arriving. Suspect hit-testing: something
+  invisible on top, a zero-size or clipped tap target (`ui-validate.sh` catches
+  the sized-wrong cases), a parent with `pointerEvents="none"`, or Expo Go's own
+  chrome (see below).
+- **The wrong thing** → the press is arriving and the handler is wrong. Suspect
+  routing, stale state, or a fallback path masking the real one.
+
+Then apply validation-loop rule 5: if it misbehaves on some screens and not
+others, **enumerate what differs before editing anything**. A real session lost
+three round-trips to a back button because two asymmetries went unmined — one
+tab appeared to work only because `router.replace('/')` happened to land on it,
+and the last broken screen was the only one wrapping rows in a gesture-handler
+component. In both cases the difference between the working and broken screens
+*was* the bug.
+
+`scripts/flow-validate.sh` answers this mechanically whenever the flow is
+reachable in a browser — prefer it to a second speculative fix.
+
+### Known Expo Go divergences
+
+Expo Go is a fixed binary, and **its own UI chrome can break** — a failure mode
+Phase 0.5 doesn't cover, because that gate is about missing native modules. The
+app's code can be entirely correct and the control still dead.
+
+- **iOS 26: the native navigation bar stops hit-testing inside Expo Go.** The
+  bar draws normally and the edge-swipe back gesture still works, but no button
+  in it is pressable
+  ([expo#39667](https://github.com/expo/expo/issues/39667),
+  [screens#3226](https://github.com/software-mansion/react-native-screens/issues/3226)).
+  Live as of Aug 2026.
+  **Workaround:** hide the native header and render an ordinary `Pressable`.
+  A custom `headerLeft` does **not** work — the whole bar stops hit-testing, not
+  the button inside it. That's the trap worth remembering, because it's the
+  obvious fix and it fails, which reads as "my replacement button is also
+  broken" and sends you chasing your own code.
+
+This is Path A's structural risk. Path A is otherwise presented as the
+risk-free path, and on the whole it is — but "the preview app itself is buggy"
+is a real category, and the user's device is where it surfaces. When a control
+is dead on the phone and correct everywhere you can check, ask what OS version
+their phone is on before assuming your code is wrong.
 
 ## The layout check passes but the app looks wrong on the phone
 

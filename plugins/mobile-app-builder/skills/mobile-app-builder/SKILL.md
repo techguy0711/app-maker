@@ -1,7 +1,7 @@
 ---
 name: mobile-app-builder
 description: Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, handling all the developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval — never exposing terminal output, jargon, or setup decisions to the user. Use whenever someone who isn't a programmer asks for an app to be built for them, wants help getting an app onto their phone, or asks about installing Xcode/Android Studio/dev tools for a mobile project. Built on top of the expo:* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client).
-version: 1.8.0
+version: 1.9.0
 license: MIT
 ---
 
@@ -41,18 +41,28 @@ Don't over-install.
 
 ## Phases (full detail in references/build-flow.md)
 
-1. **Understand the idea** — a short plain-language conversation, not a spec form.
-2. **Does this fit Expo Go?** — decide right after Phase 0 (the conversation
-   above), before touching anything else. Concrete trigger list and
-   cross-checks in `build-flow.md`. This choice determines whether step 5
-   below is the fast QR-code path (Path A, the default) or a
-   development-build path (Path B) that needs different tooling and a
-   different, non-negotiable verification step — get this right early, it's
-   expensive to discover late.
-3. **Check the environment** — run `scripts/doctor.sh` once per machine/session.
-   It reports both the Expo Go path's needs and the dev-build path's needs;
-   read whichever step 2 says applies.
-4. **Scaffold the project** — this branches on step 2's answer. **Path A:**
+These are `build-flow.md`'s numbers, not a second scheme — one set of phase
+numbers across the whole skill, so a cross-reference never needs translating.
+
+- **Phase 0 — Understand the idea.** A short plain-language conversation, not
+  a spec form. If they already have a working app in another language, this is
+  a *port*, which has its own rules — see "Porting an existing app" in
+  `build-flow.md`.
+- **Phase 0.5 — Does this fit Expo Go?** Decide right after the Phase 0
+  conversation, before touching anything else. Concrete trigger list and
+  cross-checks in `build-flow.md`. This choice determines whether Phase 3 is
+  the fast QR-code path (Path A, the default) or a development-build path
+  (Path B) that needs different tooling and a different, non-negotiable
+  verification step — get this right early, it's expensive to discover late.
+- **Phase 1 — Check the environment.** Run `scripts/doctor.sh` once per
+  machine/session. It reports three verdicts: the Expo Go path's needs, the
+  dev-build path's needs, and how Phase 3 will actually reach the user's
+  phone. Read the first two according to Phase 0.5; read the third always. If
+  it says EAS Update, ask the user for an Expo access token **now** — it's the
+  one thing on that path only they can do, and it costs them a minute here
+  versus a hard stop at Phase 3 with the whole app already built.
+- **Phase 2 — Scaffold the project, build the screens, and verify.** This
+  branches on Phase 0.5's answer. **Path A:**
    run `scripts/check-expo-go-sdk.sh` *first* and scaffold at the SDK tag it
    prints (`--template default@sdk-NN`), not plain `@latest` — the App
    Store's Expo Go build regularly lags the newest SDK by weeks, and
@@ -69,9 +79,10 @@ Don't over-install.
    single-screen stack (verified end-to-end on both known template shapes —
    don't redo this by hand). Then build the real screens out using the
    `expo:*` skills (project structure, router, native UI, data fetching).
-5. **Verify, then let them see it live** — `npx tsc --noEmit` must pass, then
-   `scripts/ui-validate.sh` must pass (see "The validation loop" below);
-   never hand a broken bundle *or* a broken layout to a non-technical user.
+   Before this phase ends, both gates must pass: `npx tsc --noEmit`, then
+   `scripts/ui-validate.sh` (see "The validation loop" below). Never hand a
+   broken bundle *or* a broken layout to a non-technical user.
+- **Phase 3 — Let them see it live.**
    **Path A (fits Expo Go, the default):** start `npx expo start` in the
    background, build the connection QR yourself with
    `scripts/make-preview-qr.sh` (Expo CLI's own QR only renders in an
@@ -92,10 +103,15 @@ Don't over-install.
    actually driving a simulator or emulator yourself before calling the app
    ready is a required step, not optional — see "Verification is not
    optional on this path" in `build-flow.md`.
-6. **Iterate** — take feedback in their own words, translate it to code.
-7. **Ship it** — `expo:eas-app-stores` for the cloud build/submit mechanics;
-   be upfront that Apple ($99/yr) and Google ($25 one-time) developer
-   accounts are the one part only the user can do (identity + payment).
+- **Phase 4 — Iterate.** Take feedback in their own words, translate it to
+  code. Every bug from here on is a *runtime* bug reported in one sentence by
+  someone who can't see a stack trace — the hardest kind, and the phase that
+  eats the most time. Rules 3 and 5 of the validation loop are what keep it
+  bounded.
+- **Phase 5 — Ship it.** `expo:eas-app-stores` for the cloud build/submit
+  mechanics; be upfront that Apple ($99/yr) and Google ($25 one-time)
+  developer accounts are the one part only the user can do (identity +
+  payment).
 
 ## Installing things: how to decide, without asking a technical question
 
@@ -117,13 +133,21 @@ user who set up this skill said installs can generally proceed — "ask or
 just install" still means: heavy/irreversible things get one plain-language
 heads-up first, lightweight things just happen.
 
-## The validation loop — four rules, all mandatory
+## The validation loop — five rules, all mandatory
 
 A non-technical user cannot tell you the layout is broken in terms you can
 act on. "It looks weird" is the most detail you will ever get, and often you
 won't get even that — they'll assume it's meant to look like that. So you
 check it yourself, before they ever see it. Full mechanics live in
-`references/build-flow.md` Phase 3; these four rules are non-negotiable.
+`references/build-flow.md` Phase 2; these five rules are non-negotiable.
+
+Two checks, and they answer different questions. Reaching for the wrong one
+wastes a phase:
+
+- **`ui-validate.sh` — does this screen hold together?** Geometry, one screen
+  at a time, rendered in isolation with the router stubbed out.
+- **`flow-validate.sh` — can a user get from A to B and back?** The real
+  router, real navigation, real data, driven in a browser.
 
 **1. Read the map and the ledger before you write layout code.**
 Run `node scripts/app-map.mjs` and read `.claude/app-map.json`: every screen and
@@ -141,7 +165,9 @@ nothing off-screen, nothing collapsed, no text clipped, no tap target under
 prints one status line and writes everything else to
 `.claude/visual/last-run.json`. On failure, **look at the diff and actual
 images it lists** — you can see them, that's the point — then fix the
-layout and run it again. Never show the user a test, a log, or a file path.
+layout and run it again. Don't show a non-technical user a test, a log, or a
+file path — running the check silently is unconditional, but what you *say*
+about it is calibrated to who you're talking to (`plain-language.md`).
 
 **3. Three attempts, then stop and talk like a person.**
 `last-run.json` carries `attempts`. At `status: "blocked"` you are done
@@ -162,6 +188,24 @@ wall, burns three more attempts, and hands them the same apology again —
 which reads to them as the tool being unreliable, not as a hard layout
 problem.
 
+**5. When a bug reproduces on some screens but not others, enumerate what
+differs before changing any code. The difference is the bug.**
+Rule 3 bounds *layout* attempts. Behaviour bugs had no equivalent, and the
+result was three fixes for one broken back button across three round-trips —
+exactly the loop rule 3 exists to prevent, in a category it didn't cover.
+Twice, the decisive evidence was an asymmetry already in hand and not mined:
+one tab worked because `/` *was* that tab, so a `router.replace('/')` fallback
+was masking the bug everywhere else; then one screen still failed because it
+was the only one wrapping its rows in a gesture-handler component.
+
+So: **before the second fix — not the third — get the discriminating
+observation.** Usually that's one plain question, asked outright rather than
+buried in an option description. For an unresponsive control the cheapest
+discriminator is *"does it do nothing, or the wrong thing?"* — those two
+answers point in opposite directions, and either is worth more than another
+speculative edit. `flow-validate.sh` answers the same question mechanically
+when the flow is reachable in a browser; prefer it to guessing.
+
 ### What the check actually proves (and what it doesn't)
 
 It renders **react-native-web in headless Chromium**, not iOS or Android. It
@@ -174,6 +218,13 @@ is a strong structural proxy and a weak fidelity one:
   native shadows/blur, keyboard avoidance, gestures, and anything rendered
   by `@expo/ui` — those are native controls with no web build, so screens
   using them are skipped outright rather than checked against a fake.
+- **Navigation is not covered at all**, and not by oversight: the config
+  aliases `expo-router` to the stubs, where `router.push` is `() => {}` and
+  `useLocalSearchParams` returns `{}`, and every screen renders alone with no
+  navigator above it. That's correct for measuring geometry and it makes
+  flows untestable here by construction. A broken back button passes this
+  check every time. That's what `flow-validate.sh` is for — a sibling
+  capability, not a gap to work around inside this one.
 
 A pass means "structurally sound", never "this is what the phone shows".
 The phone preview in Phase 3 is still the real verification, and the user's
@@ -228,10 +279,22 @@ relevant to the phase you're in:
   to the user by construction — but never silent to you: read
   `last-run.json` after any non-zero exit rather than re-running it with
   output showing.
+- `scripts/flow-validate.sh [projectDir]` — the other half. Builds the web
+  export, serves it, and drives the **real** router in the Chromium
+  `setup-visual-loop.sh` already installed, reporting per route whether a user
+  can go somewhere and get back. Adds no dependency. Run it when navigation
+  changed or a control is reported as unresponsive — not on every edit; the
+  export step costs about a minute.
 - `scripts/design-constraint.mjs add|list [projectDir]` — the ledger from
   rule 4. `add --file … --pattern … --checks … --styles … --chose …`.
-- `scripts/gen-visual-tests.mjs`, `scripts/collect-visual-result.mjs` —
-  internals of `ui-validate.sh`. Don't call them directly.
+- `scripts/verify-expo-go-update.sh [projectId|projectDir] [channel]` — asks
+  Expo's update server for a bundle exactly the way Expo Go asks, and says
+  whether the phone would actually get one. Mandatory before handing over a QR
+  code on the EAS Update fallback: that path fails *silently* — `✔ Published!`
+  and an HTTP 204 the user's phone quietly does nothing with.
+- `scripts/gen-visual-tests.mjs`, `scripts/collect-visual-result.mjs`,
+  `scripts/flow-drive.mjs` — internals of `ui-validate.sh` and
+  `flow-validate.sh`. Don't call them directly.
 - `templates/` — the config, test bootstrap, layout assertions and
   native-module stubs that `setup-visual-loop.sh` copies into a project. If
   a screen fails to import a native-only Expo module, add the missing export

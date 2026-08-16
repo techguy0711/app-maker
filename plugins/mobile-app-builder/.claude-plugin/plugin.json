@@ -1,7 +1,7 @@
 {
   "name": "mobile-app-builder",
   "version": "1.10.0",
-  "description": "Build a real mobile app (iOS/Android) end-to-end for a non-technical user, from idea to something running on their own phone to an App Store/Play Store release, with all developer-tooling setup handled automatically.",
+  "description": "Say 'build me an app' or describe your idea and Claude builds a real iOS/Android app end-to-end — no coding required — from idea to something running live on your own phone to an App Store/Play Store release, with all developer-tooling setup handled automatically.",
   "author": {
     "name": "Kristhian De Oliveira",
     "email": "kristhian.deoliveira@gmail.com",
@@ -19,6 +19,11 @@
     "non-technical",
     "app-builder",
     "no-code",
-    "claude-code"
+    "claude-code",
+    "claude-code-plugin",
+    "claude-skill",
+    "build-an-app",
+    "make-an-app",
+    "app-maker"
   ]
 }

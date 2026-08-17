@@ -74,6 +74,12 @@ be worth knowing about in advance:
 
 ---
 
+## Watch it in action
+
+[![Watch the tutorial](https://img.youtube.com/vi/x6xyV5GqhDE/maxresdefault.jpg)](https://www.youtube.com/watch?v=x6xyV5GqhDE)
+
+---
+
 <details>
 <summary><strong>For developers — how this actually works</strong></summary>
 

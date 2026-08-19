@@ -34,6 +34,7 @@ const VIS = path.join(projectDir, '.claude', 'visual');
 const REPORT = path.join(VIS, '.vitest-report.json');
 const RESULT = path.join(VIS, 'last-run.json');
 const COUNTER = path.join(VIS, 'attempts.json');
+const LOG = path.join(projectDir, '.claude', 'logs', 'ui-validate.log');
 const BUDGET = 3;
 
 // --- read the run -----------------------------------------------------------
@@ -89,6 +90,72 @@ const pathAfter = (msg, label) => {
 };
 
 const msgs = failureMessages();
+
+// Keep infrastructure diagnosis scoped to this run. The log is append-only,
+// so reading the whole file could resurrect an old port or browser error and
+// attach it to an unrelated failure weeks later.
+let recentLog = '';
+try {
+  const fullLog = fs.readFileSync(LOG, 'utf8').replace(ANSI, '');
+  const marker = fullLog.lastIndexOf('===================================================================');
+  recentLog = marker === -1 ? fullLog : fullLog.slice(marker);
+} catch { /* a missing log is itself handled as a generic run error */ }
+
+const totalTests = report
+  ? Number(report.numTotalTests ??
+      (report.testResults ?? []).reduce(
+        (n, file) => n + (file.assertionResults ?? []).length, 0))
+  : 0;
+
+function firstMatchingLine(regex) {
+  return recentLog.split('\n').map(line => line.trim()).find(line => regex.test(line)) ?? null;
+}
+
+function infrastructureForRun() {
+  const portPermission = firstMatchingLine(/\blisten\s+(?:EPERM|EACCES)\b/i);
+  if (portPermission) return {
+    kind: 'local-port-permission',
+    message: portPermission.slice(0, 240),
+    fix: 'Re-run ui-validate.sh once through this host\'s normal approval or escalation path. Do not change layout code.',
+  };
+
+  const portBusy = firstMatchingLine(/\b(?:listen\s+EADDRINUSE|address already in use)\b/i);
+  if (portBusy) return {
+    kind: 'local-port-in-use',
+    message: portBusy.slice(0, 240),
+    fix: 'Free the named local port or let the existing process finish, then re-run ui-validate.sh once. Do not change layout code.',
+  };
+
+  const browserLaunch = firstMatchingLine(
+    /browserType\.launch|executable doesn['’]t exist|failed to launch (?:the )?browser/i,
+  );
+  if (browserLaunch) return {
+    kind: 'browser-launch',
+    message: browserLaunch.slice(0, 240),
+    fix: 'Repair the browser installation named in the log, then re-run ui-validate.sh. Do not change layout code.',
+  };
+
+  const noTests = firstMatchingLine(/no test files found/i);
+  if (noTests) return {
+    kind: 'no-tests-collected',
+    message: noTests.slice(0, 240),
+    fix: 'Regenerate the visual tests and inspect the runner configuration. Do not change layout code.',
+  };
+
+  if (report && rc !== 0 && totalTests === 0 && msgs.length === 0) return {
+    kind: 'zero-tests',
+    message: 'Vitest exited before collecting any visual tests. Read .claude/logs/ui-validate.log for the startup error.',
+    fix: 'Fix the test runner infrastructure, then re-run ui-validate.sh. Do not change layout code.',
+  };
+
+  if (!report) return {
+    kind: 'missing-report',
+    message: 'Vitest did not produce its JSON report. Read .claude/logs/ui-validate.log for the startup error.',
+    fix: 'Fix the test runner infrastructure, then re-run ui-validate.sh. Do not change layout code.',
+  };
+
+  return null;
+}
 
 // --- mode: seed check -------------------------------------------------------
 if (seedCheck) {
@@ -198,7 +265,10 @@ failures.push(...deduped);
 let status;
 if (report && rc === 0) status = seeded ? 'seeded' : 'pass';
 else if (!report) status = 'error';
+else if (totalTests === 0 && msgs.length === 0) status = 'error';
 else status = 'fail';
+
+const infrastructure = status === 'error' ? infrastructureForRun() : null;
 
 // An unimportable screen outranks anything else in the run: until it is fixed
 // that screen has no safety net at all, and the fix (a stub export) has
@@ -282,9 +352,11 @@ fs.writeFileSync(RESULT, JSON.stringify({
           ? 'Reference screenshots were created on this run. Nothing to fix.'
         : status === 'fail'
           ? 'Fix the listed violations, then run ui-validate.sh again. Look at the diff images before changing layout code.'
-          : status === 'error'
-            ? 'The suite could not run. This is an infrastructure problem, not a layout problem — do not redesign anything.'
+        : status === 'error'
+            ? `${infrastructure?.message ?? 'The suite could not run.'} ` +
+              'This is an infrastructure problem, not a layout problem — do not redesign anything.'
             : 'Layout is structurally sound.',
+  infrastructure,
   failures,
   images: images.map(rel),
 }, null, 2));

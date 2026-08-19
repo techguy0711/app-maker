@@ -36,14 +36,14 @@ what the package required, but the store's Expo Go was still lagging on SDK
 54 at the time. Scaffolding at the SDK the check printed would have locked
 the project out of the very package it was built to use.
 
-Scripts are referenced via `${CLAUDE_PLUGIN_ROOT}`. If you haven't confirmed
-that variable is actually set in this session, do it now — see "Before your
-first script call" in `../build-flow.md`. It is not always present, and every
-script call silently fails with "No such file or directory" when it isn't.
+Scripts are referenced via `${MOBILE_APP_BUILDER_SKILL_DIR}`. If you have not
+resolved and verified that variable in this session, do it now — see "Before
+your first script call" in `../build-flow.md`. Do not assume either host's
+current working directory points at the installed skill.
 
 ```bash
 # Path A only:
-${CLAUDE_PLUGIN_ROOT}/scripts/check-expo-go-sdk.sh
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/check-expo-go-sdk.sh"
 # prints the store-compatible SDK, e.g. "sdk-54"
 
 npx create-expo-app@latest <app-name> --template default@sdk-54   # use the tag the script printed
@@ -59,6 +59,17 @@ always resolves to the newest SDK regardless of what the script reported.
 npx create-expo-app@latest <app-name>
 cd <app-name>
 ```
+
+**Read the generated project's instructions before changing a single source
+file.** Fresh Expo templates can include `AGENTS.md` with SDK-specific rules,
+and a project may also include `CLAUDE.md` (sometimes pointing at that same
+file). Immediately after scaffolding, read both files if they exist and follow
+the instructions that apply to this project before stripping the demo or
+writing screens. Keep both files in place: `AGENTS.md` serves agent hosts such
+as Codex, while `CLAUDE.md` preserves Claude Code's entry point. If a linked
+online reference is unreachable in the current sandbox, use the local
+instructions that are available and follow the restricted-egress fallback in
+`../troubleshooting.md`; do not loop on the network request.
 
 **Give the project its own isolated git repo, every time.** `create-expo-app`
 detects if it's running inside an existing git repository and, when it is,
@@ -125,7 +136,7 @@ tracker, a single tool) need **one screen, no tabs**.
 
 Run the script for this instead of doing it by hand:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/strip-demo-scaffold.sh --name "Display Name"
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/strip-demo-scaffold.sh" --name "Display Name"
 ```
 It recognizes the two template shapes seen and tested so far (`app/(tabs)/`
 — SDK ~54 — and `src/app/` + `app-tabs.tsx` — SDK ~57), grep-verifies
@@ -159,7 +170,7 @@ exist before the first layout does, so the first thing the user sees has
 already been checked:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/setup-visual-loop.sh
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/setup-visual-loop.sh"
 ```
 
 It installs the headless renderer and Playwright's Chromium, writes its
@@ -174,17 +185,25 @@ Read the log, note that visual checking is unavailable for this project, and
 carry on building — the app itself is unaffected, you have just lost a
 safety net. Say nothing; there is no action for them to take.
 
-Use the `expo:expo-project-structure` skill to lay out folders correctly from
-the start (this is a brand-new project, so it applies cleanly — never
-retrofit structure onto an existing app).
+When the host has the official Expo companion skills, use
+`expo:expo-project-structure` for the folder layout, `expo:expo-router` for
+navigation, `expo:expo-native-ui` for native-feeling controls, and
+`expo:expo-data-fetching` for API or remote-data work. Before using
+`expo:expo-ui` or installing `@expo/ui`, compare that companion skill's SDK
+requirement with the SDK selected in Phase 0.5. The selected path and SDK win:
+if `@expo/ui` requires a newer SDK (the universal layer requires SDK 56+ at
+the time of writing) and Path A is pinned lower, do not install it and do not
+silently switch to Path B. Use React Native primitives or Expo Go-compatible
+controls instead. A companion skill never overrides the user's preview choice
+or this phase's SDK selection.
 
-Use `expo:expo-router` for navigation/screens, and `expo:expo-native-ui` (plus
-`expo:expo-ui` for native SwiftUI/Jetpack Compose components where a native
-control — toggle, picker, sheet — genuinely fits better than a plain RN one)
-to build the actual screens matching what the user described in Phase 0.
-
-If the app needs to talk to any API or store data remotely, use
-`expo:expo-data-fetching`.
+If those skills are absent, continue rather than blocking: keep Expo Router's
+file-based routes under `app/` or `src/app/` according to the scaffold, use
+`npx expo install` for Expo-owned packages so versions match the SDK, prefer
+React Native primitives and Expo-supported modules, and run `npx expo-doctor`
+after dependency changes. These are the minimum conventions the companion
+skills would have protected; the rest of this phase and both validation gates
+remain unchanged.
 
 ---
 

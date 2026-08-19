@@ -71,14 +71,43 @@ else
 fi
 
 # 2. Test tooling. Pinned to majors so a future breaking release can't
-#    silently change the assertion API out from under the skill.
-echo "--- npm install test tooling" >>"$LOG"
-#    @vitejs/plugin-react is not optional: vitest.config.ts imports it to
-#    transform JSX. Without it the whole suite dies at config load with a
-#    module-not-found, before a single screen renders.
-npm install --save-dev --no-fund --no-audit \
-  vitest@^4 @vitest/browser@^4 @vitest/browser-playwright@^4 \
-  vitest-browser-react@^2 playwright@^1 @vitejs/plugin-react@^5 >>"$LOG" 2>&1 || fail npm-install
+#    silently change the assertion API out from under the skill. Re-running
+#    setup is a supported recovery step, and it must not turn an already-ready
+#    offline project into a network-dependent `npm install`. Verify the actual
+#    package manifests and skip the install only when every required major is
+#    already present.
+have_test_tooling() {
+  node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const root = process.argv[1];
+    const required = [
+      ["vitest", 4],
+      ["@vitest/browser", 4],
+      ["@vitest/browser-playwright", 4],
+      ["vitest-browser-react", 2],
+      ["playwright", 1],
+      ["@vitejs/plugin-react", 5],
+    ];
+    for (const [name, major] of required) {
+      const manifest = path.join(root, "node_modules", ...name.split("/"), "package.json");
+      const version = JSON.parse(fs.readFileSync(manifest, "utf8")).version;
+      if (Number(version.split(".")[0]) !== major) process.exit(1);
+    }
+  ' "$PROJECT" 2>/dev/null
+}
+
+if have_test_tooling; then
+  echo "--- compatible test tooling already present, skipping npm install" >>"$LOG"
+else
+  echo "--- npm install test tooling" >>"$LOG"
+  # @vitejs/plugin-react is not optional: vitest.config.ts imports it to
+  # transform JSX. Without it the whole suite dies at config load with a
+  # module-not-found, before a single screen renders.
+  npm install --save-dev --no-fund --no-audit \
+    vitest@^4 @vitest/browser@^4 @vitest/browser-playwright@^4 \
+    vitest-browser-react@^2 playwright@^1 @vitejs/plugin-react@^5 >>"$LOG" 2>&1 || fail npm-install
+fi
 
 # 3. Headless Chromium. --only-shell is the smaller headless-only build;
 #    it is all `toMatchScreenshot` needs and downloads noticeably faster.

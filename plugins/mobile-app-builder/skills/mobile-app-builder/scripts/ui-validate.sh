@@ -121,6 +121,40 @@ run_suite() {
 run_suite
 RC=$?
 
+# A failed JSON run with zero tests contains almost no useful diagnostic text:
+# Vitest's JSON reporter records the empty run, while startup failures (for
+# example a sandbox denying the local browser port) stay on stderr. Re-run
+# once with the verbose reporter solely to capture that infrastructure error
+# in the log. This is diagnostic only: it does not replace the first result,
+# does not loop, and never spends a layout attempt.
+report_has_zero_tests() {
+  [ -f "$JSON_OUT" ] || return 1
+  node -e '
+    const fs = require("fs");
+    try {
+      const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+      const total = Number(report.numTotalTests ??
+        (report.testResults ?? []).reduce((n, f) => n + (f.assertionResults ?? []).length, 0));
+      process.exit(total === 0 ? 0 : 1);
+    } catch { process.exit(1); }
+  ' "$JSON_OUT"
+}
+
+run_diagnostic_suite() {
+  (
+    unset CI CONTINUOUS_INTEGRATION
+    npx --no -- vitest --run \
+        --config "$VIS/vitest.config.ts" \
+        --reporter=verbose \
+        >>"$LOG" 2>&1
+  ) || true
+}
+
+if [ "$RC" -ne 0 ] && report_has_zero_tests; then
+  echo "--- JSON run reported zero tests; capturing one verbose infrastructure diagnostic" >>"$LOG"
+  run_diagnostic_suite
+fi
+
 # 2. First run on a new screen has no reference image, so Vitest writes one
 #    and fails by design. That is not a layout defect and must not cost an
 #    attempt — seed, then re-run once to get a real verdict.
@@ -140,7 +174,7 @@ node "$SKILL_DIR/scripts/collect-visual-result.mjs" "$PROJECT" \
      --rc "$RC" --seeded "$SEEDED" >>"$LOG" 2>&1
 COLLECT_RC=$?
 if [ "$COLLECT_RC" -ne 0 ] || [ ! -f "$RESULT" ]; then
-  echo "STATUS=blocked-infra RC=$RC LOG=.claude/logs/ui-validate.log"; exit 2
+  echo "STATUS=blocked-infra RC=$RC RESULT=.claude/visual/last-run.json LOG=.claude/logs/ui-validate.log"; exit 2
 fi
 
 STATUS=$(node -e "process.stdout.write(require('$RESULT').status)" 2>/dev/null || echo unknown)
@@ -155,7 +189,7 @@ COUNT=$(node -e "process.stdout.write(String(require('$RESULT').failures.length)
 # to a non-technical user about a design constraint on a layout that is fine.
 # `blocked-infra` sends it to the log instead, which is where the answer is.
 if [ "$STATUS" = "fail" ] && [ "$COUNT" -eq 0 ]; then
-  echo "STATUS=blocked-infra RC=$RC REASON=fail-without-failures LOG=.claude/logs/ui-validate.log"
+  echo "STATUS=blocked-infra RC=$RC REASON=fail-without-failures RESULT=.claude/visual/last-run.json LOG=.claude/logs/ui-validate.log"
   exit 2
 fi
 
@@ -172,5 +206,5 @@ case "$STATUS" in
   # The suite never produced a report: it couldn't run at all. Distinct from a
   # layout failure and must never be reported as one — redesigning a screen
   # because vitest is missing is the worst outcome this script can produce.
-  *)       echo "STATUS=blocked-infra RC=$RC LOG=.claude/logs/ui-validate.log"; exit 2 ;;
+  *)       echo "STATUS=blocked-infra RC=$RC RESULT=.claude/visual/last-run.json LOG=.claude/logs/ui-validate.log"; exit 2 ;;
 esac

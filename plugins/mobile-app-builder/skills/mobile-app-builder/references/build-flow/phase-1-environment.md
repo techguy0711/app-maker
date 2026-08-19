@@ -2,10 +2,11 @@
 
 **Read this when:** once per machine/session, before scaffolding.
 
-Run `scripts/doctor.sh`. Do this once per machine/session, not once per app.
-It reports three verdicts — what the Expo Go path needs, what a dev-build path
-would need, and how Phase 3 will actually deliver the app to the phone. Read
-the first two according to what Phase 0.5 decided; read the third one always.
+Run `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/doctor.sh"`. Do this once per
+machine/session, not once per app. It reports three verdicts — what the Expo
+Go path needs, what a dev-build path would need, and how Phase 3 will actually
+deliver the app to the phone. Read the first two according to what Phase 0.5
+decided; read the third one always.
 
 **If the preview-delivery verdict says EAS Update, act on it in this phase,
 not in Phase 3.** It means the shell you're running commands in isn't on the

@@ -14,7 +14,7 @@ coming (`../build-flow/phase-3-preview-expo-go.md`).
 **Run both gates again after every change**, not just the first time:
 
 ```bash
-npx tsc --noEmit && ${CLAUDE_PLUGIN_ROOT}/scripts/ui-validate.sh
+npx tsc --noEmit && "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"
 ```
 
 Their mechanics, the status table, and the `blocked` fallback are all in

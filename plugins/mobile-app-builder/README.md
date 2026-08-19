@@ -1,9 +1,11 @@
 # mobile-app-builder
 
-A Claude Code plugin that builds a real mobile app (iOS/Android) end-to-end
-for someone who doesn't code — from a plain-language conversation about the
-idea, to something running live on their own phone, to (optionally) a real
-App Store / Play Store release. No terminal, no jargon, no technical
+[![Codex Plugin](https://img.shields.io/badge/Codex-plugin-111827)](https://developers.openai.com/codex/)
+
+A Claude Code and Codex plugin that builds a real mobile app (iOS/Android)
+end-to-end for someone who doesn't code — from a plain-language conversation
+about the idea, to something running live on their own phone, to (optionally)
+a real App Store / Play Store release. No terminal, no jargon, no technical
 decisions the user didn't ask to make.
 
 ## What it handles automatically
@@ -33,18 +35,30 @@ decisions the user didn't ask to make.
 
 - macOS, Linux, or Windows with Node.js (the plugin will help install it if
   missing on macOS/Linux).
-- The **[expo](https://github.com/expo/expo)** official Claude Code plugin
-  installed and enabled — this plugin builds screens using its skills
-  (`expo-router`, `expo-native-ui`, `expo-ui`, `expo-data-fetching`,
-  `eas-app-stores`, `eas-simulator`, `expo-dev-client`) rather than
-  duplicating that knowledge.
+- Either Claude Code or Codex.
+- The official **[Expo](https://github.com/expo/expo)** companion plugin is
+  recommended when available. Its skills add framework-specific guidance;
+  the ordinary scaffold, preview, and validation flow also has a built-in
+  fallback when those companion skills are absent.
 
-## Installation
+## Installation — Claude Code
 
 ```
 /plugin marketplace add <this-repo's-git-url-or-local-path>
 /plugin install mobile-app-builder@mobile-app-builder-marketplace
 ```
+
+## Installation — Codex
+
+```bash
+codex plugin marketplace add <this-repo's-git-url-or-local-path>
+codex plugin add mobile-app-builder@app-maker
+```
+
+Start a new task after installation so the skill is loaded. These Codex files
+are additive: `.claude-plugin/plugin.json` remains the Claude manifest, while
+`.codex-plugin/plugin.json` and the repo's `.agents/plugins/marketplace.json`
+provide Codex packaging around the same `skills/mobile-app-builder/` source.
 
 ## Usage
 

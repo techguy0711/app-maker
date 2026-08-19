@@ -34,31 +34,43 @@ a development build) changes what Phase 1 checks for and replaces Phase 3
 entirely. Getting it wrong is expensive — you find out after every screen is
 already written.
 
-## Before your first script call: `${CLAUDE_PLUGIN_ROOT}`
+## Before your first script call: resolve the installed skill directory
 
-The scripts referenced throughout live in this plugin's own `scripts/`
-directory. Reference them via `${CLAUDE_PLUGIN_ROOT}` — an environment variable
-Claude Code sets to this plugin's install location, which doesn't move when you
-`cd` into the new project. Never hardcode an absolute path to the plugin, and
-never use a path relative to your current working directory.
+The scripts live beside this file under the installed skill's `scripts/`
+directory, not in the app project. Capture that absolute directory once as
+`MOBILE_APP_BUILDER_SKILL_DIR`; every phase uses it after changing into the
+new project.
 
-**Verify it's actually set before relying on it.** It is not guaranteed to be
-present in every shell — confirmed in a real session where it was unset, and
-every subsequent `${CLAUDE_PLUGIN_ROOT}/...` command failed with "No such file
-or directory" until this was caught. One cheap check, before the first script
-call of the session:
+- **Claude Code:** start with `${CLAUDE_PLUGIN_ROOT}`. Depending on how the
+  plugin was loaded, it may name either the skill directory itself or the
+  outer plugin directory, so accept both tested shapes.
+- **Codex:** use the parent directory of the `SKILL.md` path shown for this
+  skill in Codex's skill catalog. Codex does not promise a
+  `${CLAUDE_PLUGIN_ROOT}` equivalent.
+
+Set and verify the task-specific variable before the first script call:
 
 ```bash
-if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-  echo "CLAUDE_PLUGIN_ROOT is unset — using the fallback below."
+# Codex: set this first from the active skill's absolute SKILL.md path.
+# MOBILE_APP_BUILDER_SKILL_DIR="/absolute/path/to/mobile-app-builder"
+
+if [ -z "${MOBILE_APP_BUILDER_SKILL_DIR:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  if [ -d "${CLAUDE_PLUGIN_ROOT}/scripts" ]; then
+    MOBILE_APP_BUILDER_SKILL_DIR="${CLAUDE_PLUGIN_ROOT}"
+  elif [ -d "${CLAUDE_PLUGIN_ROOT}/skills/mobile-app-builder/scripts" ]; then
+    MOBILE_APP_BUILDER_SKILL_DIR="${CLAUDE_PLUGIN_ROOT}/skills/mobile-app-builder"
+  fi
+fi
+
+if [ ! -x "${MOBILE_APP_BUILDER_SKILL_DIR:-}/scripts/doctor.sh" ]; then
+  echo "Could not resolve the mobile-app-builder skill directory." >&2
+  return 1 2>/dev/null || exit 1
 fi
 ```
 
-If it's unset, fall back to the path Claude Code shows as "Base directory for
-this skill" in the message where this skill was invoked — that's the same
-location `${CLAUDE_PLUGIN_ROOT}` would have pointed to. Capture that string once,
-at the start of the session, rather than re-deriving it every time a script
-needs to run.
+Never infer this path from the current working directory and never hardcode a
+machine-specific install path in the generated app. Use
+`"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/..."` for every bundled helper.
 
 ## The other reference files
 

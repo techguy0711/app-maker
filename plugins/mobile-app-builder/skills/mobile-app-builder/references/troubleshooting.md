@@ -66,23 +66,24 @@ output never appears — confirmed by testing, including after a phone had
 already connected and successfully loaded the bundle. Don't keep polling
 the log waiting for it. Build and deliver the QR yourself:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh <port> /tmp/preview-qr.png
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" <port> /tmp/preview-qr.png
 ```
-(`${CLAUDE_PLUGIN_ROOT}` is an environment variable Claude Code sets to this
-plugin's install location — not a path relative to the project dir you're
-likely `cd`ed into by this point. It has been observed unset in a real
-session, though — see `build-flow/phase-2-scaffold.md` for the fallback if a command
-like this one fails with "No such file or directory".)
+(`MOBILE_APP_BUILDER_SKILL_DIR` is resolved once from the current skill's
+location. Claude Code can derive it from `CLAUDE_PLUGIN_ROOT`; Codex provides
+the `SKILL.md` location in its skill catalog. See `build-flow.md` for the
+host-specific setup if this command reports "No such file or directory".)
 
-**Print the ASCII QR block the script outputs directly in your chat reply —
-once, cleanly. Don't experiment with alternate QR generation methods inline
-in front of the user.** Two things confirmed by testing, the hard way:
+**Present the generated QR once, cleanly, using the current host's supported
+output.** Codex desktop should render `/tmp/preview-qr.png` inline using its
+absolute path. Codex CLI and plain Claude Code terminals should print the
+ASCII QR block the script outputs directly in the reply. Don't experiment
+with alternate QR generation methods inline in front of the user. Two things
+confirmed by testing, the hard way:
 
-1. SendUserFile-ing the PNG as the primary delivery method silently
+1. `SendUserFile`-ing the PNG as the primary delivery method silently
    "succeeds" with no error in a plain-terminal session, and the user never
-   sees it — there's no image viewer to show it in. Print the ASCII text
-   the script gives you as the primary method every time; only attach the
-   PNG as an extra once you already know images render for this session.
+   sees it — there's no image viewer to show it in. Use ASCII in that host;
+   use an inline PNG in Codex desktop, where local images are rendered.
 2. Do not hand-roll a different QR command instead of running the script
    (e.g. `npx -y qrcode-terminal "<url>"` or `npx -y qrcode --small
    "<url>"` directly) — both of those CLIs force ANSI color escape codes,
@@ -97,15 +98,15 @@ If the script can't determine a LAN IP (rare — unusual network setup), it
 says so explicitly; fall back to `npx expo start --tunnel` and grep its log
 for an `exp://`/`exps://` URL, which tunnel mode does print as a plain line.
 
-## `expo start --tunnel` fails, or this Claude Code session isn't on the user's own network
+## `expo start --tunnel` fails, or this agent session isn't on the user's own network
 
 Reported directly by a user running Claude Code's **mobile app**: the tunnel
 never established because the session's own network layer blocked the proxy
 connection `--tunnel` needs. This is a different failure from "no LAN IP
 found" (below) — it means neither the LAN-IP QR flow nor the `--tunnel`
 fallback can work at all, because the shell running these commands isn't on
-the user's own network in the first place. Any remote/cloud Claude Code
-session is a candidate for this, not just the mobile app specifically.
+the user's own network in the first place. Any remote/cloud agent session is
+a candidate for this, not just the Claude Code mobile app specifically.
 
 Don't debug this as a network misconfiguration on the user's end — it isn't
 one. Skip straight to the EAS Update fallback in `build-flow/phase-3-preview-expo-go.md`'s "When the
@@ -113,7 +114,9 @@ dev server can't reach the phone at all." That path publishes the JS bundle
 to Expo's cloud instead of hosting it from this machine, so no tunnel or LAN
 reachability is needed. It is verified end-to-end; follow its command sequence
 exactly, and run `scripts/verify-expo-go-update.sh` before handing over a QR
-code — a successful publish is not evidence the phone can load it.
+code with
+`"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/verify-expo-go-update.sh"` — a
+successful publish is not evidence the phone can load it.
 
 Better still, don't arrive here at Phase 3 at all. `doctor.sh` reports a
 **preview delivery** verdict at Phase 1, and it names this case (and the Expo
@@ -200,6 +203,18 @@ this is easy to miss until a real (non-Expo-Go) build breaks. Run `npx
 expo-doctor` after installing any new native module, not only `tsc` — it's
 the check built to catch exactly this. Fix is always the same shape: `npx
 expo install <the-missing-peer-it-names>`.
+
+## `npm install` reports vulnerabilities immediately after a fresh Expo scaffold
+
+Treat the audit summary as advisory until the Expo-aware checks say otherwise.
+Expo templates pin a mutually compatible dependency set, and a fresh scaffold
+can report transitive vulnerabilities even while `npx expo-doctor`, TypeScript,
+lint, and the runtime checks all pass. Do **not** run `npm audit fix --force`
+automatically: it can jump those pinned packages across incompatible major
+versions and turn a healthy Expo project into a broken one. Run
+`npx expo-doctor`, `npx tsc --noEmit`, lint, and the relevant preview/runtime
+checks; record the audit output for maintainers and only change a dependency
+when there is a compatible Expo-supported upgrade.
 
 ## A project path with a space in it breaks a development build
 
@@ -362,12 +377,21 @@ on retry. Just retry once before treating it as a real problem.
 Infrastructure, not layout. **Do not redesign anything and do not start the
 three-attempt clock** — the fallback conversation is for real layout limits,
 and using it here would tell a user their design is impossible when actually
-a config file is wrong. Read `.claude/logs/ui-validate.log` and
-`.claude/visual/last-run.json`; failures come back as `kind: "error"` rather
-than `kind: "layout"`, which is the tell.
+a config file is wrong. Read `.claude/visual/last-run.json` first: startup
+failures carry an `infrastructure` object and spend no attempt; per-screen
+runner failures come back as `kind: "error"` rather than `kind: "layout"`.
+Then use `.claude/logs/ui-validate.log` for the full diagnostic.
 
 Common causes, in the order they actually occur:
 
+- **`infrastructure.kind` is `local-port-permission`, with `listen EPERM` or
+  `listen EACCES` in the log** — the current host's sandbox denied Vitest
+  permission to bind its local browser port before it collected any tests.
+  This was confirmed in Codex desktop with a zero-test JSON report; the app
+  and layout were both fine. Run the same `ui-validate.sh` command once
+  through the host's normal approval/escalation path. In Claude Code, keep
+  using Claude's normal permission flow. Do not change the screen, do not
+  reinstall app packages, and do not spend a design attempt.
 - **`Flow is not supported` / a parse error inside `node_modules/react-native/Libraries/…`** — the single most likely failure after adding a dependency. Packages that ship React Native *native component specs* (`react-native-safe-area-context`, `-screens`, `-gesture-handler`, `-reanimated`, and most `react-native-*` wrappers) deep-import Flow-typed React Native source. Vite's parser rejects Flow outright, so one such import kills the entire run before a single screen renders. Aliasing bare `react-native` to `react-native-web` does *not* cover it — the import is a deep path, not the bare name. Add the package to the stub aliases in `templates/vitest.config.ts` and give it exports in `templates/expo-stubs.tsx`. Confirmed on a stock SDK 57 scaffold, whose default screen uses safe-area-context. Wrappers whose only job is insets or gesture plumbing should stub as pass-through containers, not placeholder boxes — a placeholder would hide their children from the layout checks, and the children are the part worth checking.
 - **`[PARSE_ERROR] Unexpected JSX expression` inside `node_modules/@expo/vector-icons/build/*.js`** — that package ships untranspiled JSX in its `build/` output, relying on Metro's transformer to handle it; Vite's esbuild/rolldown optimizer chokes on raw JSX in a plain `.js` file and kills the whole run before any screen renders. Confirmed on a real app using `Ionicons` from `@expo/vector-icons` — every screen failed at once. Fix is the same shape as the Flow case above: alias `@expo/vector-icons` to the stubs in `templates/vitest.config.ts` and add icon-set exports (`Ionicons`, `MaterialIcons`, etc.) to `templates/expo-stubs.tsx`, sized to the `size` prop rather than a fixed box so icons don't blow up small inline layouts (chevrons in a row, a glyph inside a round button). Already fixed in the shared templates as of Aug 2026 — if it recurs, a new icon family is being imported that isn't in the stub list yet.
 - **`[MISSING_EXPORT] "X" is not exported by "node_modules/react-native-web/dist/index.js"` (e.g. `TurboModuleRegistry`), traced back to `expo-modules-core/src/requireNativeModule.ts`** — happens with Expo modules that *do* have a real web implementation (confirmed with `expo-audio`, which has a genuine HTML5-audio-backed `.web` build) but whose universal entry point still imports `expo-modules-core`'s native-module bridge unconditionally. That bridge references React Native internals `react-native-web` doesn't export, and Vite's dependency optimizer fails on it during its pre-scan, before platform-specific resolution ever gets a chance to pick the `.web` file. The fix isn't "make the web build work" — it's the same stub-alias pattern as everything else here: add the module to `templates/vitest.config.ts`'s alias list and give it a fake hook/function shape in `templates/expo-stubs.tsx` (for `expo-audio`: no-op `setAudioModeAsync`, and `useAudioPlayer`/`useAudioPlayerStatus` returning static idle state). Already fixed for `expo-audio`; the same signature from a different package means that package needs the same treatment.

@@ -1,0 +1,46 @@
+{
+  "name": "mobile-app-builder",
+  "version": "1.10.0",
+  "description": "Build a real iOS or Android app from a plain-language idea, preview it on a phone, and prepare it for App Store or Play Store release.",
+  "author": {
+    "name": "Kristhian De Oliveira",
+    "email": "kristhian.deoliveira@gmail.com",
+    "url": "https://github.com/techguy0711"
+  },
+  "homepage": "https://github.com/techguy0711/app-maker",
+  "repository": "https://github.com/techguy0711/app-maker",
+  "license": "MIT",
+  "keywords": [
+    "expo",
+    "react-native",
+    "mobile",
+    "ios",
+    "android",
+    "non-technical",
+    "app-builder",
+    "no-code",
+    "codex",
+    "build-an-app",
+    "make-an-app",
+    "app-maker"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Mobile App Builder",
+    "shortDescription": "Build Expo apps from plain-language ideas",
+    "longDescription": "Build and verify a real iOS or Android app from a plain-language idea, preview it on a phone, iterate on feedback, and prepare it for store release.",
+    "developerName": "Kristhian De Oliveira",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/techguy0711/app-maker",
+    "defaultPrompt": [
+      "Build a mobile app from this idea: [describe the app and who it is for].",
+      "Turn this existing product into an iOS and Android app.",
+      "Help me build and preview an Expo app on my phone."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

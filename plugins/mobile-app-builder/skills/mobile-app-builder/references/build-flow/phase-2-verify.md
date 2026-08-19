@@ -5,7 +5,7 @@
 ## Before you write layout code: read the map and the ledger
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/app-map.mjs   # writes app-map.md + app-map.json
+node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/app-map.mjs"   # writes app-map.md + app-map.json
 ```
 
 Read `.claude/app-map.md` instead of crawling the project. It's a tree of every
@@ -38,7 +38,7 @@ It uses the project's own `typescript`, so it adds no dependency. If it exits
 
 ```bash
 npx tsc --noEmit                                    # gate 1
-${CLAUDE_PLUGIN_ROOT}/scripts/ui-validate.sh        # gate 2
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"     # gate 2
 ```
 
 **Gate 1, `tsc`, is non-negotiable.** Treat any error as blocking. A
@@ -64,7 +64,15 @@ It prints one line and writes everything else to
 | `fail` | Real defect, `attempts` below 3 | Fix it, run again |
 | `blocked` | Same failure 3 times | Stop. Fallback below. |
 | `not-configured` | Setup never ran or failed | Skip the gate, carry on silently |
-| `blocked-infra` | The suite itself couldn't run | Read the log. **Not** a layout problem — do not redesign anything |
+| `blocked-infra` | The suite itself couldn't run | Read `last-run.json`, then the log. **Not** a layout problem — do not redesign anything |
+
+On `blocked-infra`, inspect `last-run.json`'s `infrastructure` object before
+reading the longer log. If its `kind` is `local-port-permission`, the host's
+sandbox denied Vitest's local browser port: run the exact same
+`ui-validate.sh` command once through that host's normal approval or
+escalation path. This is not a layout edit, costs no attempt, and must never
+lead to the three-attempt design fallback. Claude Code keeps using its normal
+permission flow; Codex uses its normal command-approval flow.
 
 On `fail`, read `last-run.json`. Layout failures name the element, the check,
 and the exact pixel amount (`Extends 84px past the right edge of a 390px
@@ -91,7 +99,7 @@ a no-op and there is no navigator above anything. A back button that does
 nothing passes this gate every time.
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/flow-validate.sh     # the other half
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/flow-validate.sh"  # the other half
 ```
 
 That builds the web export, serves it, and drives the **real** router in the
@@ -133,7 +141,7 @@ what you'd *do*:
 Then build the one they chose, and record it:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/design-constraint.mjs add \
+node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/design-constraint.mjs" add \
   --file app/index.tsx \
   --pattern "three cards side by side at phone width" \
   --checks overflow-right,small-tap-target \

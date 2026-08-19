@@ -26,20 +26,26 @@ npx expo start --port 8081   # run in background, from inside the project dir;
                               # note the actual port it logs
                               # ("Waiting on http://localhost:XXXX") in case
                               # 8081 was already taken and it picked another
-${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh 8081 /tmp/preview-qr.png
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" 8081 /tmp/preview-qr.png
 ```
 
-**Print the ASCII QR the script outputs directly in your reply — that is
-the primary method, not a fallback.** Tested both ways, in a plain-terminal
-Claude Code session specifically (very likely how this skill is actually
-being run): delivering the PNG via SendUserFile reported success with no
-error, and the user never saw it — there's no inline image viewer in that
-context, and SendUserFile has no way to know that and tell you. ASCII text
-printed in the response works in every session type, terminal or GUI alike,
-with no silent-failure mode. Only attach the PNG as a bonus once you already
-know images render for this user (they've confirmed it, or you can see rich
-content rendering elsewhere in the session) — never rely on it as the only
-way they get the code.
+**Deliver the QR using the current host's visible output.** The script prints
+an ASCII QR and writes a PNG, so generate both and then choose the primary
+presentation that the user can actually see:
+
+- **Codex desktop:** show the PNG inline with an absolute local path, for
+  example `![Expo Go preview QR](/tmp/preview-qr.png)`, and include the URL.
+- **Codex CLI or plain Claude Code terminal:** print the ASCII QR block the
+  script outputs directly in the reply and include the URL. In plain Claude
+  Code, a file attachment can be a secondary convenience only.
+- **Any other rich client:** use its supported inline-image mechanism only
+  when the rendered image is known to be visible; otherwise use the ASCII QR.
+
+This distinction is tested and important. In a plain-terminal Claude Code
+session, delivering the PNG through `SendUserFile` reported success with no
+error while the user saw nothing because that client had no inline image
+viewer. The ASCII QR has no such silent-failure mode in terminal clients.
+Never rely on a delivery mechanism the current host does not display.
 
 Getting the ASCII itself right matters: don't reach for the `qrcode` or
 `qrcode-terminal` CLIs directly (`npx -y qrcode-terminal "<url>"`, `npx -y
@@ -58,7 +64,11 @@ render is distorted by an unusual terminal font or width.
 
 Tell them, plainly:
 1. "Install the free 'Expo Go' app from the App Store (iPhone) or Play Store (Android) — just like installing any other app. If it's already installed, open the store page for it anyway and update it — Expo Go only works with one specific version of the tools, so an old install will fail to open a fresh project." (See `../troubleshooting.md` → "Project is incompatible with this version of Expo Go" — Phase 2's SDK check should have already prevented this, but mention it if it somehow still comes up.)
-2. "Open your phone's camera (iPhone) or the Expo Go app's scan button (Android), and point it at this QR code." — referring to the ASCII QR block you printed directly in your reply, NOT an image file. Sending the PNG instead is the documented failure: it reports success and the user sees nothing.
+2. "Open your phone's camera (iPhone) or the Expo Go app's scan button
+   (Android), and point it at this QR code." In a terminal, that means the
+   ASCII QR block you printed directly in your reply; in Codex desktop, it
+   means the inline PNG. Do not offer a bare image attachment in a client
+   where attachments are not rendered.
 3. "The app will open on your phone. Any time I change something, it'll update automatically — you don't need to rescan."
 
 This requires their phone and your dev machine to be on the **same Wi-Fi
@@ -77,8 +87,8 @@ when a real phone isn't an option — it needs no local installs at all.
 
 Everything above assumes the commands you're running execute on the user's
 own computer, on the same network their phone can join. That's true for a
-normal local Claude Code CLI session, but not for every way this skill can
-be run — reported directly by a user: Claude Code's **mobile app** session
+normal local Codex or Claude Code CLI session, but not for every way this
+skill can be run — reported directly by a user: Claude Code's **mobile app** session
 couldn't get a working tunnel, because the session's own network layer
 blocked the proxy connection `expo start --tunnel` needs to set up. The
 same reasoning applies to any other setup where the shell you're running
@@ -157,7 +167,7 @@ build don't collide.
 the user:**
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/verify-expo-go-update.sh . preview
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/verify-expo-go-update.sh" . preview
 ```
 
 That asks `u.expo.dev` with exactly the headers Expo Go sends, and tells you
@@ -170,7 +180,7 @@ Only once that passes, build the QR. `make-preview-qr.sh` accepts a full URL
 as well as a bare port, so no new renderer is needed:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh "<update URL>" /tmp/preview-qr.png
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" "<update URL>" /tmp/preview-qr.png
 ```
 
 Take the URL from `eas update`'s output where it prints one. If you have to
@@ -186,7 +196,7 @@ clean 200 for that same URL — so you hand it over with explicit confirmation
 behind a code that cannot work. Substitute the scheme yourself:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/make-preview-qr.sh \
+"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" \
   "exp://u.expo.dev/<projectId>?channel-name=preview" /tmp/preview-qr.png
 ```
 

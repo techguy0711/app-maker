@@ -1,7 +1,6 @@
 ---
 name: mobile-app-builder
-description: Build a real mobile app (iOS/Android) end-to-end from a plain description of the idea — "build me an app", "make an app that does X", "I have an idea for an app", "turn this into an app" — all the way from idea to something running live on the user's own phone to an App Store/Play Store release. Handles all developer-tooling setup (Node, Homebrew, Xcode/Android Studio, Expo/EAS CLI) automatically or with a single plain-language approval, and never exposes terminal output, jargon, or setup decisions — this matters most for non-technical users, but the skill works for anyone starting a new app from scratch. Use this as the entry point for any "build/make/create a mobile app" request, including from technical users, rather than reaching directly for the narrower expo-* skills (expo-project-structure, expo-router, expo-native-ui, expo-ui, expo-data-fetching, eas-app-stores, eas-simulator, expo-dev-client), which this skill orchestrates. Also use when someone asks about installing Xcode/Android Studio/dev tools for a mobile project.
-version: 1.10.0
+description: Build a new iOS or Android app end-to-end from a plain-language idea, including Expo setup, scaffolding, verified screens, phone preview, iteration, and optional App Store or Play Store release. Use for "build me an app", "make an app that...", porting an existing product to mobile, or setting up development tools for a new mobile project. Designed for non-technical users but usable by anyone. Prefer the official expo:* skills when available; continue with this skill's built-in Expo workflow when they are absent.
 license: MIT
 ---
 
@@ -12,6 +11,30 @@ should never have to see a terminal, an error stack trace, or a technical
 decision they didn't ask to make. Every phase below exists to keep them from
 getting stuck. Read `references/plain-language.md` now — it sets the tone for
 everything else in this skill.
+
+## Host and companion-skill setup
+
+This skill supports both Claude Code and Codex from the same files. Keep the
+shared build flow identical; branch only for host-specific path resolution,
+permission prompts, and file/image delivery.
+
+Before the first bundled script call, resolve
+`MOBILE_APP_BUILDER_SKILL_DIR` as described in `references/build-flow.md`.
+Claude Code can derive it from `${CLAUDE_PLUGIN_ROOT}`; Codex exposes the
+installed `SKILL.md` path in its skill catalog. Never assume the current
+working directory is the skill directory.
+
+Use the official `expo:*` skills when the host has them installed. If they are
+absent, do not block the ordinary scaffold, Expo Go preview, or validation
+flow: follow this skill's embedded Expo instructions and normal React Native
+conventions. For specialized dev-client or store-release work, use the
+corresponding EAS commands directly or explain the missing companion plugin
+only when it is actually needed.
+
+The host's approval and sandbox rules always win. An **AUTO** item means the
+workflow does not need a separate product decision; it never means bypass a
+Codex approval prompt, a Claude permission prompt, or an operating-system
+security boundary.
 
 ## The core idea: avoid heavy installs by default
 
@@ -55,7 +78,8 @@ numbers across the whole skill, so a cross-reference never needs translating.
   the fast QR-code path (Path A, the default) or a development-build path
   (Path B) that needs different tooling and a different, non-negotiable
   verification step — get this right early, it's expensive to discover late.
-- **Phase 1 — Check the environment.** Run `scripts/doctor.sh` once per
+- **Phase 1 — Check the environment.** Run
+  `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/doctor.sh"` once per
   machine/session. It reports three verdicts: the Expo Go path's needs, the
   dev-build path's needs, and how Phase 3 will actually reach the user's
   phone. Read the first two according to Phase 0.5; read the third always. If
@@ -68,7 +92,8 @@ numbers across the whole skill, so a cross-reference never needs translating.
   the meantime (`troubleshooting.md`, "Egress is restricted").
 - **Phase 2 — Scaffold the project, build the screens, and verify.** This
   branches on Phase 0.5's answer. **Path A:**
-   run `scripts/check-expo-go-sdk.sh` *first* and scaffold at the SDK tag it
+   run `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/check-expo-go-sdk.sh"`
+   *first* and scaffold at the SDK tag it
    prints (`--template default@sdk-NN`), not plain `@latest` — the App
    Store's Expo Go build regularly lags the newest SDK by weeks, and
    scaffolding ahead of it produces a project that can never open on the
@@ -78,26 +103,34 @@ numbers across the whole skill, so a cross-reference never needs translating.
    requires). Following Path A's check on Path B is a real, tested mistake:
    it can lock the project below the SDK a required native package needs
    (confirmed with `expo-widgets`, which required SDK 57 while the check was
-   still reporting the store's SDK 54). Then run
-   `scripts/strip-demo-scaffold.sh --name "Display Name"` to remove the
+   still reporting the store's SDK 54). Immediately after scaffolding, read
+   the generated project's `AGENTS.md` and `CLAUDE.md` when present; keep and
+   follow both so project-local guidance works in Codex and Claude Code. Then
+   run
+   `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/strip-demo-scaffold.sh" --name
+   "Display Name"` to remove the
    template's demo tabs/explore/modal content and drop to a clean
    single-screen stack (verified end-to-end on both known template shapes —
-   don't redo this by hand). Then build the real screens out using the
-   `expo:*` skills (project structure, router, native UI, data fetching).
+   don't redo this by hand). Then build the real screens using the `expo:*`
+   skills when available (project structure, router, native UI, data
+   fetching), or the embedded fallback in `phase-2-scaffold.md` when they are
+   not. Guard `expo:expo-ui` / `@expo/ui` against the SDK already selected in
+   Phase 0.5; if it needs a newer SDK, use Expo Go-compatible React Native
+   controls instead of changing the user's path.
    Before this phase ends, both gates must pass: `npx tsc --noEmit`, then
-   `scripts/ui-validate.sh` (see "The validation loop" below). Never hand a
+   `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"` (see "The
+   validation loop" below). Never hand a
    broken bundle *or* a broken layout to a non-technical user.
 - **Phase 3 — Let them see it live.**
    **Path A (fits Expo Go, the default):** start `npx expo start` in the
    background, build the connection QR yourself with
    `scripts/make-preview-qr.sh` (Expo CLI's own QR only renders in an
    interactive terminal, which a background process never has — confirmed
-   by testing, don't wait for it to appear), and print the ASCII QR the
-   script outputs **directly in your reply** — that's the primary,
-   always-works method, not SendUserFile-ing the PNG (confirmed by testing:
-   that silently "succeeds" with no error in a plain terminal session and
-   the user never sees it — no image viewer to show it in). Only attach the
-   PNG as an extra once you already know images render for this session.
+   by testing, don't wait for it to appear), and generate both its ASCII
+   output and PNG. In Codex desktop, render the PNG from its absolute path and
+   include the connection URL as text. In Codex CLI or a plain Claude Code
+   terminal, print the ASCII QR directly in the reply; a Claude file
+   attachment can be a secondary convenience, never the only delivery path.
    This is the milestone that matters most on Path A — get here fast, and
    get it right the first time (print it once, cleanly — don't experiment
    with alternate QR commands in front of the user; the script already
@@ -123,8 +156,10 @@ numbers across the whole skill, so a cross-reference never needs translating.
 
 Every install command lives in `references/environment-setup.md`, tagged:
 
-- **AUTO** — just run it, then say one plain sentence about what happened.
-  (Node, Watchman, eas-cli, Homebrew formulae — small, fast, reversible.)
+- **AUTO** — proceed without asking a product-choice question, subject to the
+  host's normal approval and sandbox prompts, then say one plain sentence
+  about what happened. (Node, Watchman, eas-cli, Homebrew formulae — small,
+  fast, reversible.)
 - **ASK FIRST** — tell the user what it is, roughly how big/long, get a
   go-ahead. (Homebrew itself, Android Studio, SDK/system images — large or
   needs their admin password.)
@@ -137,7 +172,9 @@ Every install command lives in `references/environment-setup.md`, tagged:
 Never run the ASK FIRST or USER MUST CLICK tier silently, even though the
 user who set up this skill said installs can generally proceed — "ask or
 just install" still means: heavy/irreversible things get one plain-language
-heads-up first, lightweight things just happen.
+heads-up first. For AUTO items, use the host's built-in approval request when
+the command needs network, global-install, GUI, or out-of-workspace access;
+do not split or rewrite a command to evade that approval.
 
 ## The validation loop — five rules, all mandatory
 
@@ -156,7 +193,8 @@ wastes a phase:
   router, real navigation, real data, driven in a browser.
 
 **1. Read the map and the ledger before you write layout code.**
-Run `node scripts/app-map.mjs`, then read **`.claude/app-map.md`** — a tree of
+Run `node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/app-map.mjs"`, then read
+**`.claude/app-map.md`** — a tree of
 the project annotated with each file's route, what imports it, what it imports,
 its style names, the `risky` list of patterns that break on device, and the
 layouts that already failed in *this* project. One read replaces a directory
@@ -169,7 +207,8 @@ layout edit, growing with every screen added. Open it only when you need a
 specific style value or the complete used-by list. The digest marks everything
 it truncates, so you can always tell when there's more to fetch.
 
-**2. After `tsc` passes, run `scripts/ui-validate.sh`. Silently.**
+**2. After `tsc` passes, run
+`"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"`. Silently.**
 It renders every screen headless at phone size and checks real geometry:
 nothing off-screen, nothing collapsed, no text clipped, no tap target under
 44×44, no overlapping controls, no content stranded below the fold. It
@@ -191,7 +230,9 @@ flex container?". They pick, you build it. This is a normal design
 conversation to them, and it should read as one.
 
 **4. Record what failed, so it can't happen twice.**
-Once they choose, run `scripts/design-constraint.mjs add` with the file, the
+Once they choose, run
+`node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/design-constraint.mjs" add`
+with the file, the
 pattern that failed, the styles involved, and the alternative they picked.
 That writes `.claude/design-constraints.json`, which rule 1 makes you read
 next time. Skipping this means the next similar request walks into the same
@@ -247,7 +288,7 @@ Consult these as needed — don't load them all up front, pull in the one
 relevant to the phase you're in:
 
 - `references/build-flow.md` — a short **index** of the phases, plus the
-  `${CLAUDE_PLUGIN_ROOT}` check to do before your first script call. Each phase
+  cross-host skill-directory check before your first script call. Each phase
   is its own file in `references/build-flow/`, and each one ends by naming the
   next. **Read one phase file at a time — the one you're in.** The full set is
   ~12k tokens; a single phase is 400–3,000. Loading phases you aren't in is the
@@ -326,10 +367,10 @@ relevant to the phase you're in:
   a screen fails to import a native-only Expo module, add the missing export
   to `templates/expo-stubs.tsx` — that's a stub gap, not a layout bug.
 - `scripts/make-preview-qr.sh <port|full-url> [output.png]` — prints a clean
-  ASCII QR code straight to stdout (print this in your reply — it's the
-  primary delivery method, proven reliable in both terminal and GUI
-  sessions) and optionally also writes a PNG as a bonus for known-GUI
-  sessions. Use this every time instead of expecting Expo CLI to print its
+  ASCII QR code and optionally writes a PNG. Use the ASCII output in Codex
+  CLI and plain Claude Code terminals; render the PNG by absolute path in
+  Codex desktop. Include the URL in every host. Use this every time instead
+  of expecting Expo CLI to print its
   own QR code — it won't, in a background process — or hand-rolling a
   `qrcode`/`qrcode-terminal` CLI call yourself, which produces unreadable
   ANSI garbage unless invoked exactly the way this script does (Phase 3,

@@ -1,0 +1,20 @@
+{
+  "name": "app-maker",
+  "interface": {
+    "displayName": "App Maker"
+  },
+  "plugins": [
+    {
+      "name": "mobile-app-builder",
+      "source": {
+        "source": "local",
+        "path": "./plugins/mobile-app-builder"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

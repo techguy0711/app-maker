@@ -1,11 +1,18 @@
 # Environment setup — exact commands, per tool
 
-Run `scripts/doctor.sh` first. Only act on items it marks `[MISSING]`, and only
-the ones the chosen path (see `build-flow.md`) actually needs. Never install
-something "just in case."
+Run `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/doctor.sh"` first. Only act on
+items it marks `[MISSING]`, and only the ones the chosen path (see
+`build-flow.md`) actually needs. Never install something "just in case."
 
-Every command below is annotated:
-- **AUTO** — safe to just run, then tell the user one sentence about what you did. Small, fast, fully reversible (uninstall with `brew uninstall` / `npm uninstall -g`).
+Every command below is annotated. These labels never override host security
+or approval controls: if Codex asks for approval, Claude asks for permission,
+or the operating system requires confirmation, use that native prompt before
+continuing. Do not work around a sandbox or denied permission.
+
+- **AUTO** — safe to run without a separate conversational confirmation when
+  the current host already permits it, then tell the user one sentence about
+  what you did. Small, fast, fully reversible (uninstall with `brew uninstall`
+  / `npm uninstall -g`).
 - **ASK FIRST** — large download, long wait, or meaningful disk usage. Tell the user what it is, roughly how big/long, and get a go-ahead before running.
 - **USER MUST CLICK** — Apple/Google gate this behind a GUI step or account login. You can kick it off and give exact instructions, but you cannot finish it for them. Say so plainly, don't pretend otherwise, and don't loop retrying it.
 

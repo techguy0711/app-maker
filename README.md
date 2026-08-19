@@ -6,28 +6,44 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF)](https://claude.com/claude-code)
+[![Codex Plugin](https://img.shields.io/badge/Codex-plugin-111827)](https://developers.openai.com/codex/)
 
 </div>
 
 ---
 
-## Install it
+## Install it in your agent
 
-Open [Claude Code](https://claude.com/claude-code), paste these two lines
-in, and press enter:
+Choose either Claude Code or Codex. Both use the same skill and produce the
+same app; installing one does not replace or disable the other.
+
+### Claude Code
+
+Open [Claude Code](https://claude.com/claude-code), paste these two lines in,
+and press enter:
 
 ```
 /plugin marketplace add techguy0711/app-maker
 /plugin install mobile-app-builder@mobile-app-builder-marketplace
 ```
 
-That's it. Nothing to download, nothing to configure by hand.
+### Codex
+
+Open Codex and run:
+
+```bash
+codex plugin marketplace add techguy0711/app-maker
+codex plugin add mobile-app-builder@app-maker
+```
+
+Start a new task after installation so Codex loads the skill. That's it:
+nothing else to configure by hand.
 
 ## Then just say what you want
 
 > "I want an app where I can track my daily water intake with a big plus button."
 
-Claude will ask a couple of plain-language questions, build it, and hand you
+Your agent will ask a couple of plain-language questions, build it, and hand you
 a QR code to scan with your phone — the app runs live in a free app called
 **Expo Go** while you're building it, and updates instantly every time you
 ask for a change.
@@ -43,33 +59,39 @@ ask for a change.
 The only thing it *can't* do for you: Apple and Google both require a real
 person to sign up for a developer account before your app can go live in
 their stores ($99/year for Apple, $25 once for Google). Everything else —
-including the actual building — Claude handles.
+including the actual building — your agent handles.
 
-## What Claude might ask you
+## What your agent might ask you
 
 Not much, and never anything technical. Two things come up often enough to
 be worth knowing about in advance:
 
 - **"What version does Expo Go show?"** Expo Go only runs one version of the
   underlying tools at a time, so building for the wrong one produces an app
-  your phone simply refuses to open. Usually Claude can look this up itself.
+  your phone simply refuses to open. Usually your agent can look this up itself.
   When it can't, it asks you instead of guessing — open Expo Go, read the
   number on the home screen, done.
 - **"Which of these two designs do you prefer?"** If a layout won't fit on a
-  phone screen no matter how it's arranged, Claude stops rearranging it and
+  phone screen no matter how it's arranged, your agent stops rearranging it and
   offers you two simpler options that will work, described in plain language.
   It also writes the dead end down, so it won't walk into the same one again
   later in your project.
 
 ## Before you start
 
-- You'll need [Claude Code](https://claude.com/claude-code) installed.
+- You'll need either [Claude Code](https://claude.com/claude-code) or Codex
+  installed.
 - Install the free **Expo Go** app on your phone from the App Store or Play
   Store — that's what your app will run inside while you build it.
-- This plugin also uses Expo's official plugin to build screens — install it
-  too, the same way:
+- Expo's official companion skills improve framework-specific guidance but
+  are optional for the core build flow. Install the matching Expo plugin for
+  your agent when available:
   ```
+  # Claude Code
   /plugin install expo@claude-plugins-official
+
+  # Codex
+  codex plugin add expo@openai-curated
   ```
 
 ---
@@ -85,10 +107,12 @@ be worth knowing about in advance:
 
 ### The plugin
 
-[`plugins/mobile-app-builder/`](plugins/mobile-app-builder/) is the actual
-plugin, packaged the standard Claude Code way (`.claude-plugin/plugin.json`
-+ `skills/`). [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)
-at the repo root is what makes `/plugin marketplace add` work.
+[`plugins/mobile-app-builder/`](plugins/mobile-app-builder/) is the single
+plugin shared by both agents. Claude Code reads `.claude-plugin/plugin.json`;
+Codex reads `.codex-plugin/plugin.json`; both load the same `skills/` tree.
+The repo exposes separate marketplace catalogs for each host:
+`.claude-plugin/marketplace.json` for Claude Code and
+`.agents/plugins/marketplace.json` for Codex.
 
 ### The build flow
 
@@ -163,8 +187,17 @@ screenshots to show the user while the phone step moves to their machine.
 
 ### Testing the plugin locally, without reinstalling
 
+Claude Code:
+
 ```
 claude --plugin-dir plugins/mobile-app-builder
+```
+
+Codex uses the repo-local marketplace:
+
+```bash
+codex plugin marketplace add /absolute/path/to/app-maker
+codex plugin add mobile-app-builder@app-maker
 ```
 
 `plugins/mobile-app-builder/` is the single copy of this skill; there's no

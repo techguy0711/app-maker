@@ -1,30 +1,41 @@
 # Tests
 
-Three checkers for the skill in `plugins/mobile-app-builder/`. None of them
-need network access; all of them need a scaffolded Expo app to run against.
+Four checkers for the skill in `plugins/mobile-app-builder/`. The Codex
+support test and macOS audit are static and need no scaffold. The two runtime
+harnesses can exercise more behavior when given a scaffolded Expo app.
 
 ```bash
+REPO=/absolute/path/to/app-maker
+
 # scaffold something to test against first (either template profile works)
 npx create-expo-app@latest /tmp/probe --template default@sdk-54 && cd /tmp/probe && npm install
 
-S="$PWD/plugins/mobile-app-builder/skills/mobile-app-builder"   # absolute, see below
-bash tests/test-core.sh            "$S" /tmp/probe
-bash tests/test-validation-loop.sh "$S" /tmp/probe
-python3 tests/macos-audit.py       "$S"
+S="$REPO/plugins/mobile-app-builder/skills/mobile-app-builder"
+bash "$REPO/tests/test-core.sh"            "$S" /tmp/probe
+bash "$REPO/tests/test-validation-loop.sh" "$S" /tmp/probe
+bash "$REPO/tests/test-codex-support.sh"   "$S"
+python3 "$REPO/tests/macos-audit.py"       "$S"
 ```
 
 ## What each one covers
 
 **`test-core.sh`** — the restricted-network behaviour and the pieces that
 silently misreport when the environment is unusual. Both branches of
-`doctor.sh`'s Expo reachability probe (the unreachable one via the real API,
-the reachable one via `EXPO_PROBE_URL` pointed at any host that resolves), the
+`doctor.sh`'s Expo reachability probe (with deterministic LAN and HTTP stubs,
+so the developer machine's current network cannot change the verdict), the
 `CI=1` screenshot-baseline regression, browser reuse and config-written-anyway
-in `setup-visual-loop.sh`, and an end-to-end run on a fresh scaffold.
+in `setup-visual-loop.sh`, and an end-to-end run on a fresh scaffold. Its
+timeouts use `timeout`, `gtimeout`, or the macOS-bundled Perl fallback in that
+order.
 
 **`test-validation-loop.sh`** — the stubs, the template propagation path, the
 documented-behaviour claims, the SDK hard stop, and a live run against a
 multi-screen app including an animated screen and a dynamic route.
+
+**`test-codex-support.sh`** — additive dual-host packaging: both manifests and
+both marketplace catalogs remain present, Codex UI metadata is valid, the
+shared skill uses a host-neutral script root, preview output is host-aware,
+and both installation paths stay documented. It is entirely static.
 
 **`macos-audit.py`** — static scan for constructs that work on Linux and break
 on macOS: BSD `sed -i`, missing `timeout(1)`, `grep -P`, `readlink -f`,

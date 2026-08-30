@@ -86,7 +86,7 @@ esac
 # behind with none of the package files, and a normal install then reports
 # success without repairing it. --force heals that partial cache instead of
 # handing Node a path that cannot be required.
-CACHE_DIR="${TMPDIR:-/tmp}/mobile-app-builder-qrcode-terminal"
+CACHE_DIR="${TMPDIR:-/tmp}/app-maker-qrcode-terminal"
 TERMINAL_MODULE="$CACHE_DIR/node_modules/qrcode-terminal"
 PNG_MODULE="$CACHE_DIR/node_modules/qrcode"
 NEEDS_INSTALL=0

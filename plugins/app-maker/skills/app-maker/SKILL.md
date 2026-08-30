@@ -1,10 +1,10 @@
 ---
-name: mobile-app-builder
+name: app-maker
 description: Build a new iOS or Android app end-to-end from a plain-language idea, including Expo setup, scaffolding, verified screens, phone preview, iteration, and optional App Store or Play Store release. Use for "build me an app", "make an app that...", porting an existing product to mobile, or setting up development tools for a new mobile project. Designed for non-technical users but usable by anyone. Prefer the official expo:* skills when available; continue with this skill's built-in Expo workflow when they are absent.
 license: MIT
 ---
 
-# Mobile App Builder (for non-technical users)
+# App Maker (for non-technical users)
 
 You are building a real, working mobile app for someone who does not code and
 should never have to see a terminal, an error stack trace, or a technical
@@ -19,7 +19,7 @@ shared build flow identical; branch only for host-specific path resolution,
 permission prompts, and file/image delivery.
 
 Before the first bundled script call, resolve
-`MOBILE_APP_BUILDER_SKILL_DIR` as described in `references/build-flow.md`.
+`APP_MAKER_SKILL_DIR` as described in `references/build-flow.md`.
 Claude Code can derive it from `${CLAUDE_PLUGIN_ROOT}`; Codex exposes the
 installed `SKILL.md` path in its skill catalog. Never assume the current
 working directory is the skill directory.
@@ -79,7 +79,7 @@ numbers across the whole skill, so a cross-reference never needs translating.
   (Path B) that needs different tooling and a different, non-negotiable
   verification step — get this right early, it's expensive to discover late.
 - **Phase 1 — Check the environment.** Run
-  `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/doctor.sh"` once per
+  `"${APP_MAKER_SKILL_DIR}/scripts/doctor.sh"` once per
   machine/session. It reports three verdicts: the Expo Go path's needs, the
   dev-build path's needs, and how Phase 3 will actually reach the user's
   phone. Read the first two according to Phase 0.5; read the third always. If
@@ -92,7 +92,7 @@ numbers across the whole skill, so a cross-reference never needs translating.
   the meantime (`troubleshooting.md`, "Egress is restricted").
 - **Phase 2 — Scaffold the project, build the screens, and verify.** This
   branches on Phase 0.5's answer. **Path A:**
-   run `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/check-expo-go-sdk.sh"`
+   run `"${APP_MAKER_SKILL_DIR}/scripts/check-expo-go-sdk.sh"`
    *first* and scaffold at the SDK tag it
    prints (`--template default@sdk-NN`), not plain `@latest` — the App
    Store's Expo Go build regularly lags the newest SDK by weeks, and
@@ -107,7 +107,7 @@ numbers across the whole skill, so a cross-reference never needs translating.
    the generated project's `AGENTS.md` and `CLAUDE.md` when present; keep and
    follow both so project-local guidance works in Codex and Claude Code. Then
    run
-   `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/strip-demo-scaffold.sh" --name
+   `"${APP_MAKER_SKILL_DIR}/scripts/strip-demo-scaffold.sh" --name
    "Display Name"` to remove the
    template's demo tabs/explore/modal content and drop to a clean
    single-screen stack (verified end-to-end on both known template shapes —
@@ -118,7 +118,7 @@ numbers across the whole skill, so a cross-reference never needs translating.
    Phase 0.5; if it needs a newer SDK, use Expo Go-compatible React Native
    controls instead of changing the user's path.
    Before this phase ends, both gates must pass: `npx tsc --noEmit`, then
-   `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"` (see "The
+   `"${APP_MAKER_SKILL_DIR}/scripts/ui-validate.sh"` (see "The
    validation loop" below). Never hand a
    broken bundle *or* a broken layout to a non-technical user.
 - **Phase 3 — Let them see it live.**
@@ -193,7 +193,7 @@ wastes a phase:
   router, real navigation, real data, driven in a browser.
 
 **1. Read the map and the ledger before you write layout code.**
-Run `node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/app-map.mjs"`, then read
+Run `node "${APP_MAKER_SKILL_DIR}/scripts/app-map.mjs"`, then read
 **`.claude/app-map.md`** — a tree of
 the project annotated with each file's route, what imports it, what it imports,
 its style names, the `risky` list of patterns that break on device, and the
@@ -208,7 +208,7 @@ specific style value or the complete used-by list. The digest marks everything
 it truncates, so you can always tell when there's more to fetch.
 
 **2. After `tsc` passes, run
-`"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"`. Silently.**
+`"${APP_MAKER_SKILL_DIR}/scripts/ui-validate.sh"`. Silently.**
 It renders every screen headless at phone size and checks real geometry:
 nothing off-screen, nothing collapsed, no text clipped, no tap target under
 44×44, no overlapping controls, no content stranded below the fold. It
@@ -231,7 +231,7 @@ conversation to them, and it should read as one.
 
 **4. Record what failed, so it can't happen twice.**
 Once they choose, run
-`node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/design-constraint.mjs" add`
+`node "${APP_MAKER_SKILL_DIR}/scripts/design-constraint.mjs" add`
 with the file, the
 pattern that failed, the styles involved, and the alternative they picked.
 That writes `.claude/design-constraints.json`, which rule 1 makes you read

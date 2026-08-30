@@ -1,6 +1,6 @@
 # Environment setup — exact commands, per tool
 
-Run `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/doctor.sh"` first. Only act on
+Run `"${APP_MAKER_SKILL_DIR}/scripts/doctor.sh"` first. Only act on
 items it marks `[MISSING]`, and only the ones the chosen path (see
 `build-flow.md`) actually needs. Never install something "just in case."
 

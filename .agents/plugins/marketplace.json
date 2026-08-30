@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "mobile-app-builder",
+      "name": "app-maker",
       "source": {
         "source": "local",
-        "path": "./plugins/mobile-app-builder"
+        "path": "./plugins/app-maker"
       },
       "policy": {
         "installation": "AVAILABLE",

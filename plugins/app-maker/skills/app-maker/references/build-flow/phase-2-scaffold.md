@@ -36,14 +36,14 @@ what the package required, but the store's Expo Go was still lagging on SDK
 54 at the time. Scaffolding at the SDK the check printed would have locked
 the project out of the very package it was built to use.
 
-Scripts are referenced via `${MOBILE_APP_BUILDER_SKILL_DIR}`. If you have not
+Scripts are referenced via `${APP_MAKER_SKILL_DIR}`. If you have not
 resolved and verified that variable in this session, do it now — see "Before
 your first script call" in `../build-flow.md`. Do not assume either host's
 current working directory points at the installed skill.
 
 ```bash
 # Path A only:
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/check-expo-go-sdk.sh"
+"${APP_MAKER_SKILL_DIR}/scripts/check-expo-go-sdk.sh"
 # prints the store-compatible SDK, e.g. "sdk-54"
 
 npx create-expo-app@latest <app-name> --template default@sdk-54   # use the tag the script printed
@@ -136,7 +136,7 @@ tracker, a single tool) need **one screen, no tabs**.
 
 Run the script for this instead of doing it by hand:
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/strip-demo-scaffold.sh" --name "Display Name"
+"${APP_MAKER_SKILL_DIR}/scripts/strip-demo-scaffold.sh" --name "Display Name"
 ```
 It recognizes the two template shapes seen and tested so far (`app/(tabs)/`
 — SDK ~54 — and `src/app/` + `app-tabs.tsx` — SDK ~57), grep-verifies
@@ -170,7 +170,7 @@ exist before the first layout does, so the first thing the user sees has
 already been checked:
 
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/setup-visual-loop.sh"
+"${APP_MAKER_SKILL_DIR}/scripts/setup-visual-loop.sh"
 ```
 
 It installs the headless renderer and Playwright's Chromium, writes its

@@ -175,7 +175,7 @@ QR_OUT="$QR_ROOT/preview.png"
 QR_LOG="$QR_ROOT/qr.txt"
 PATH="$QR_ROOT/bin:$PATH" TMPDIR="$QR_ROOT/tmp" \
   bash "$SCRIPTS/make-preview-qr.sh" "$QR_URL" "$QR_OUT" >"$QR_LOG" 2>&1
-QR_CACHE="$QR_ROOT/tmp/mobile-app-builder-qrcode-terminal"
+QR_CACHE="$QR_ROOT/tmp/app-maker-qrcode-terminal"
 if grep -Fq "FAKE-QR $QR_URL" "$QR_LOG" && [ -s "$QR_OUT" ] &&
    [ "$(sed -n '1p' "$QR_CACHE/install-count")" = "1" ]; then
   ok "QR helper installs both renderers and passes a full URL as data"

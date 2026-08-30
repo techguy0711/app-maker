@@ -1,6 +1,6 @@
 # Example apps
 
-Apps actually produced by the `mobile-app-builder` skill, checked in so you
+Apps actually produced by the `app-maker` skill, checked in so you
 can read the source without building anything.
 
 | App | What it shows |

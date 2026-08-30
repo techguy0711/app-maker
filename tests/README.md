@@ -1,6 +1,6 @@
 # Tests
 
-Four checkers for the skill in `plugins/mobile-app-builder/`. The Codex
+Four checkers for the skill in `plugins/app-maker/`. The Codex
 support test and macOS audit are static and need no scaffold. The two runtime
 harnesses can exercise more behavior when given a scaffolded Expo app.
 
@@ -10,7 +10,7 @@ REPO=/absolute/path/to/app-maker
 # scaffold something to test against first (either template profile works)
 npx create-expo-app@latest /tmp/probe --template default@sdk-54 && cd /tmp/probe && npm install
 
-S="$REPO/plugins/mobile-app-builder/skills/mobile-app-builder"
+S="$REPO/plugins/app-maker/skills/app-maker"
 bash "$REPO/tests/test-core.sh"            "$S" /tmp/probe
 bash "$REPO/tests/test-validation-loop.sh" "$S" /tmp/probe
 bash "$REPO/tests/test-codex-support.sh"   "$S"

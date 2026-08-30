@@ -4,7 +4,7 @@ Tap the robot to launch a ball at the tower. Knock all 12 blocks down before
 you run out of shots. The aim line swings up and down on its own — tap when
 it's pointing where you want.
 
-Built end-to-end with the `mobile-app-builder` skill (v1.5.0) as its first
+Built end-to-end with the `app-maker` skill (v1.5.0) as its first
 real test, including the visual validation loop.
 
 ![Block Toss](screenshot.png)

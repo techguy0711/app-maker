@@ -26,7 +26,7 @@ npx expo start --port 8081   # run in background, from inside the project dir;
                               # note the actual port it logs
                               # ("Waiting on http://localhost:XXXX") in case
                               # 8081 was already taken and it picked another
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" 8081 /tmp/preview-qr.png
+"${APP_MAKER_SKILL_DIR}/scripts/make-preview-qr.sh" 8081 /tmp/preview-qr.png
 ```
 
 **Deliver the QR using the current host's visible output.** The script prints
@@ -167,7 +167,7 @@ build don't collide.
 the user:**
 
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/verify-expo-go-update.sh" . preview
+"${APP_MAKER_SKILL_DIR}/scripts/verify-expo-go-update.sh" . preview
 ```
 
 That asks `u.expo.dev` with exactly the headers Expo Go sends, and tells you
@@ -180,7 +180,7 @@ Only once that passes, build the QR. `make-preview-qr.sh` accepts a full URL
 as well as a bare port, so no new renderer is needed:
 
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" "<update URL>" /tmp/preview-qr.png
+"${APP_MAKER_SKILL_DIR}/scripts/make-preview-qr.sh" "<update URL>" /tmp/preview-qr.png
 ```
 
 Take the URL from `eas update`'s output where it prints one. If you have to
@@ -196,7 +196,7 @@ clean 200 for that same URL — so you hand it over with explicit confirmation
 behind a code that cannot work. Substitute the scheme yourself:
 
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" \
+"${APP_MAKER_SKILL_DIR}/scripts/make-preview-qr.sh" \
   "exp://u.expo.dev/<projectId>?channel-name=preview" /tmp/preview-qr.png
 ```
 

@@ -38,7 +38,7 @@ already written.
 
 The scripts live beside this file under the installed skill's `scripts/`
 directory, not in the app project. Capture that absolute directory once as
-`MOBILE_APP_BUILDER_SKILL_DIR`; every phase uses it after changing into the
+`APP_MAKER_SKILL_DIR`; every phase uses it after changing into the
 new project.
 
 - **Claude Code:** start with `${CLAUDE_PLUGIN_ROOT}`. Depending on how the
@@ -52,25 +52,25 @@ Set and verify the task-specific variable before the first script call:
 
 ```bash
 # Codex: set this first from the active skill's absolute SKILL.md path.
-# MOBILE_APP_BUILDER_SKILL_DIR="/absolute/path/to/mobile-app-builder"
+# APP_MAKER_SKILL_DIR="/absolute/path/to/app-maker"
 
-if [ -z "${MOBILE_APP_BUILDER_SKILL_DIR:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+if [ -z "${APP_MAKER_SKILL_DIR:-}" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
   if [ -d "${CLAUDE_PLUGIN_ROOT}/scripts" ]; then
-    MOBILE_APP_BUILDER_SKILL_DIR="${CLAUDE_PLUGIN_ROOT}"
-  elif [ -d "${CLAUDE_PLUGIN_ROOT}/skills/mobile-app-builder/scripts" ]; then
-    MOBILE_APP_BUILDER_SKILL_DIR="${CLAUDE_PLUGIN_ROOT}/skills/mobile-app-builder"
+    APP_MAKER_SKILL_DIR="${CLAUDE_PLUGIN_ROOT}"
+  elif [ -d "${CLAUDE_PLUGIN_ROOT}/skills/app-maker/scripts" ]; then
+    APP_MAKER_SKILL_DIR="${CLAUDE_PLUGIN_ROOT}/skills/app-maker"
   fi
 fi
 
-if [ ! -x "${MOBILE_APP_BUILDER_SKILL_DIR:-}/scripts/doctor.sh" ]; then
-  echo "Could not resolve the mobile-app-builder skill directory." >&2
+if [ ! -x "${APP_MAKER_SKILL_DIR:-}/scripts/doctor.sh" ]; then
+  echo "Could not resolve the app-maker skill directory." >&2
   return 1 2>/dev/null || exit 1
 fi
 ```
 
 Never infer this path from the current working directory and never hardcode a
 machine-specific install path in the generated app. Use
-`"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/..."` for every bundled helper.
+`"${APP_MAKER_SKILL_DIR}/scripts/..."` for every bundled helper.
 
 ## The other reference files
 

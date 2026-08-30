@@ -2,7 +2,7 @@
 
 **Read this when:** once per machine/session, before scaffolding.
 
-Run `"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/doctor.sh"`. Do this once per
+Run `"${APP_MAKER_SKILL_DIR}/scripts/doctor.sh"`. Do this once per
 machine/session, not once per app. It reports three verdicts — what the Expo
 Go path needs, what a dev-build path would need, and how Phase 3 will actually
 deliver the app to the phone. Read the first two according to what Phase 0.5

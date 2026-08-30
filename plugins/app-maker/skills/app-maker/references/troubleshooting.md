@@ -66,9 +66,9 @@ output never appears — confirmed by testing, including after a phone had
 already connected and successfully loaded the bundle. Don't keep polling
 the log waiting for it. Build and deliver the QR yourself:
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/make-preview-qr.sh" <port> /tmp/preview-qr.png
+"${APP_MAKER_SKILL_DIR}/scripts/make-preview-qr.sh" <port> /tmp/preview-qr.png
 ```
-(`MOBILE_APP_BUILDER_SKILL_DIR` is resolved once from the current skill's
+(`APP_MAKER_SKILL_DIR` is resolved once from the current skill's
 location. Claude Code can derive it from `CLAUDE_PLUGIN_ROOT`; Codex provides
 the `SKILL.md` location in its skill catalog. See `build-flow.md` for the
 host-specific setup if this command reports "No such file or directory".)
@@ -115,7 +115,7 @@ to Expo's cloud instead of hosting it from this machine, so no tunnel or LAN
 reachability is needed. It is verified end-to-end; follow its command sequence
 exactly, and run `scripts/verify-expo-go-update.sh` before handing over a QR
 code with
-`"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/verify-expo-go-update.sh"` — a
+`"${APP_MAKER_SKILL_DIR}/scripts/verify-expo-go-update.sh"` — a
 successful publish is not evidence the phone can load it.
 
 Better still, don't arrive here at Phase 3 at all. `doctor.sh` reports a

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Environment report for the mobile-app-builder skill.
+# Environment report for the app-maker skill.
 # Detection ONLY — this script never installs or changes anything.
 # Run it, read the output, then follow references/environment-setup.md
 # for the exact install command for anything marked MISSING.

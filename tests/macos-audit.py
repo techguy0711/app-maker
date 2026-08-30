@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""macOS portability audit for the mobile-app-builder shipping scripts.
+"""macOS portability audit for the app-maker shipping scripts.
 
 Every check carries a positive control: a line that MUST match. If the control
 fails, the check is reported BLIND rather than clean — a scanner that silently

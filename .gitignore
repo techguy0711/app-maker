@@ -24,3 +24,8 @@ web-build/
 **/.claude/design-constraints.json
 **/.claude/logs/
 **/.claude/visual/
+
+# Claude Code writes per-developer permission grants here, and they contain
+# absolute paths from whoever's machine approved them. Shared settings belong
+# in .claude/settings.json; personal ones stay out of the repo.
+.claude/settings.local.json

@@ -5,7 +5,7 @@
 ## Before you write layout code: read the map and the ledger
 
 ```bash
-node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/app-map.mjs"   # writes app-map.md + app-map.json
+node "${APP_MAKER_SKILL_DIR}/scripts/app-map.mjs"   # writes app-map.md + app-map.json
 ```
 
 Read `.claude/app-map.md` instead of crawling the project. It's a tree of every
@@ -38,7 +38,7 @@ It uses the project's own `typescript`, so it adds no dependency. If it exits
 
 ```bash
 npx tsc --noEmit                                    # gate 1
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/ui-validate.sh"     # gate 2
+"${APP_MAKER_SKILL_DIR}/scripts/ui-validate.sh"     # gate 2
 ```
 
 **Gate 1, `tsc`, is non-negotiable.** Treat any error as blocking. A
@@ -99,7 +99,7 @@ a no-op and there is no navigator above anything. A back button that does
 nothing passes this gate every time.
 
 ```bash
-"${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/flow-validate.sh"  # the other half
+"${APP_MAKER_SKILL_DIR}/scripts/flow-validate.sh"  # the other half
 ```
 
 That builds the web export, serves it, and drives the **real** router in the
@@ -141,7 +141,7 @@ what you'd *do*:
 Then build the one they chose, and record it:
 
 ```bash
-node "${MOBILE_APP_BUILDER_SKILL_DIR}/scripts/design-constraint.mjs" add \
+node "${APP_MAKER_SKILL_DIR}/scripts/design-constraint.mjs" add \
   --file app/index.tsx \
   --pattern "three cards side by side at phone width" \
   --checks overflow-right,small-tap-target \

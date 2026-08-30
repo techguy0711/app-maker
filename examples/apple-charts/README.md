@@ -4,7 +4,7 @@ Browse Apple Music's real top charts — Songs, Albums, Videos, Playlists —
 across 16 countries, and play a 30-second preview of any song right in the
 app.
 
-Built end-to-end with the `mobile-app-builder` skill as a test of wiring a
+Built end-to-end with the `app-maker` skill as a test of wiring a
 real public API into a polished screen, with no developer account or sign-in
 of any kind involved anywhere.
 

@@ -1,4 +1,4 @@
-# mobile-app-builder
+# 📱 App Maker
 
 [![Codex Plugin](https://img.shields.io/badge/Codex-plugin-111827)](https://developers.openai.com/codex/)
 
@@ -44,26 +44,26 @@ decisions the user didn't ask to make.
 ## Installation — Claude Code
 
 ```
-/plugin marketplace add <this-repo's-git-url-or-local-path>
-/plugin install mobile-app-builder@mobile-app-builder-marketplace
+/plugin marketplace add techguy0711/app-maker
+/plugin install app-maker@app-maker
 ```
 
 ## Installation — Codex
 
 ```bash
-codex plugin marketplace add <this-repo's-git-url-or-local-path>
-codex plugin add mobile-app-builder@app-maker
+codex plugin marketplace add techguy0711/app-maker
+codex plugin add app-maker@app-maker
 ```
 
 Start a new task after installation so the skill is loaded. These Codex files
 are additive: `.claude-plugin/plugin.json` remains the Claude manifest, while
 `.codex-plugin/plugin.json` and the repo's `.agents/plugins/marketplace.json`
-provide Codex packaging around the same `skills/mobile-app-builder/` source.
+provide Codex packaging around the same `skills/app-maker/` source.
 
 ## Usage
 
 Just ask, in plain language: *"Build me an app that..."*. The skill
-activates automatically. See `skills/mobile-app-builder/SKILL.md` and its
+activates automatically. See `skills/app-maker/SKILL.md` and its
 `references/` for the full phase-by-phase process this plugin follows —
 every step in it exists because something broke in real testing and got
 fixed; see `references/troubleshooting.md` for the specifics.

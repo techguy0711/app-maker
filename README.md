@@ -2,13 +2,30 @@
 
 # 📱 App Maker
 
-### Build a real iPhone or Android app just by describing it — no coding required.
+### Describe an app. Watch it appear on your phone.
+
+<a href="https://www.youtube.com/watch?v=x6xyV5GqhDE"><img src="https://img.youtube.com/vi/x6xyV5GqhDE/maxresdefault.jpg" width="640" alt="Watch an app go from a sentence to running on a phone"></a>
+
+<!-- Once docs/demo.gif exists, swap the thumbnail above for the loop:
+<img src="docs/demo.gif" width="640" alt="Prompt to running app in under two minutes">
+-->
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-5A4FCF)](https://claude.com/claude-code)
 [![Codex Plugin](https://img.shields.io/badge/Codex-plugin-111827)](https://developers.openai.com/codex/)
 
 </div>
+
+> "I want an app where I can track my daily water intake with a big plus button."
+
+Two plain-language questions later, a QR code appears. Scan it and the app is
+running on your phone, updating live every time you ask for a change. When
+you're ready, it ships to the App Store and Google Play.
+
+**No Xcode. No Android Studio. No code.**
+
+**Install:** `/plugin marketplace add techguy0711/app-maker` then
+`/plugin install app-maker@app-maker`
 
 ---
 
@@ -24,7 +41,7 @@ and press enter:
 
 ```
 /plugin marketplace add techguy0711/app-maker
-/plugin install mobile-app-builder@mobile-app-builder-marketplace
+/plugin install app-maker@app-maker
 ```
 
 ### Codex
@@ -33,7 +50,7 @@ Open Codex and run:
 
 ```bash
 codex plugin marketplace add techguy0711/app-maker
-codex plugin add mobile-app-builder@app-maker
+codex plugin add app-maker@app-maker
 ```
 
 Start a new task after installation so Codex loads the skill. That's it:
@@ -41,9 +58,15 @@ nothing else to configure by hand.
 
 ## Then just say what you want
 
-> "I want an app where I can track my daily water intake with a big plus button."
+The water-intake app above took one sentence. So does every one of these:
 
-Your agent will ask a couple of plain-language questions, build it, and hand you
+> "A timer for my espresso shots with one big start button."
+>
+> "Something to log the books I've read, with a star rating."
+>
+> "Turn my recipe site into an app my family can use offline."
+
+Your agent asks a couple of plain-language questions, builds it, and hands you
 a QR code to scan with your phone — the app runs live in a free app called
 **Expo Go** while you're building it, and updates instantly every time you
 ask for a change.
@@ -96,18 +119,11 @@ be worth knowing about in advance:
 
 ---
 
-## Watch it in action
-
-[![Watch the tutorial](https://img.youtube.com/vi/x6xyV5GqhDE/maxresdefault.jpg)](https://www.youtube.com/watch?v=x6xyV5GqhDE)
-
----
-
-<details>
-<summary><strong>For developers — how this actually works</strong></summary>
+## For developers — how this actually works
 
 ### The plugin
 
-[`plugins/mobile-app-builder/`](plugins/mobile-app-builder/) is the single
+[`plugins/app-maker/`](plugins/app-maker/) is the single
 plugin shared by both agents. Claude Code reads `.claude-plugin/plugin.json`;
 Codex reads `.codex-plugin/plugin.json`; both load the same `skills/` tree.
 The repo exposes separate marketplace catalogs for each host:
@@ -117,7 +133,7 @@ The repo exposes separate marketplace catalogs for each host:
 ### The build flow
 
 Full detail in
-[`build-flow.md`](plugins/mobile-app-builder/skills/mobile-app-builder/references/build-flow.md);
+[`build-flow.md`](plugins/app-maker/skills/app-maker/references/build-flow.md);
 each phase is its own file so an agent loads only the one it's in.
 
 | Phase | What happens |
@@ -132,8 +148,12 @@ each phase is its own file so an agent loads only the one it's in.
 
 ### The parts that exist because something broke
 
-Nearly every guard here is a postmortem. The specifics live in
-[`troubleshooting.md`](plugins/mobile-app-builder/skills/mobile-app-builder/references/troubleshooting.md).
+Nearly every guard here is a postmortem. Six of them are written up in
+[**Six ways an agent building mobile apps fails**](docs/six-ways-agents-fail-building-mobile-apps.md)
+— the SDK the store hasn't shipped yet, the QR code that structurally cannot
+print, the git check that nearly committed someone's Documents folder. The full
+set, with reproductions, is in
+[`troubleshooting.md`](plugins/app-maker/skills/app-maker/references/troubleshooting.md).
 
 **Expo Go pins exactly one SDK version.** `create-expo-app@latest` always
 grabs the newest SDK, and the store build of Expo Go can lag it by weeks
@@ -190,17 +210,17 @@ screenshots to show the user while the phone step moves to their machine.
 Claude Code:
 
 ```
-claude --plugin-dir plugins/mobile-app-builder
+claude --plugin-dir plugins/app-maker
 ```
 
 Codex uses the repo-local marketplace:
 
 ```bash
 codex plugin marketplace add /absolute/path/to/app-maker
-codex plugin add mobile-app-builder@app-maker
+codex plugin add app-maker@app-maker
 ```
 
-`plugins/mobile-app-builder/` is the single copy of this skill; there's no
+`plugins/app-maker/` is the single copy of this skill; there's no
 separate working copy to keep in sync.
 
 ### Example apps built with it
@@ -223,8 +243,6 @@ The repo-detection check compares `git rev-parse --show-toplevel` against the
 project's own path, never `--is-inside-work-tree`, which returns true for
 every subfolder of any ancestor repo and once nearly staged an unrelated
 directory tree.
-
-</details>
 
 ---
 

@@ -5,12 +5,13 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc --noEmit)",
-      "Bash(curl -s *)",
       "Bash(npx expo-doctor)",
-      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/plugins/app-maker/skills/app-maker/scripts/make-preview-qr.sh\" *)",
-      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/plugins/app-maker/skills/app-maker/scripts/check-expo-go-sdk.sh\")",
-      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/plugins/app-maker/skills/app-maker/scripts/ui-validate.sh\")",
-      "Bash(\"/Users/kristhiandeoliveira/Documents/App Maker/plugins/app-maker/skills/app-maker/scripts/doctor.sh\")"
+      "Bash(curl -s https://api.expo.dev/*)",
+      "Bash(./plugins/app-maker/skills/app-maker/scripts/doctor.sh)",
+      "Bash(./plugins/app-maker/skills/app-maker/scripts/check-expo-go-sdk.sh)",
+      "Bash(./plugins/app-maker/skills/app-maker/scripts/ui-validate.sh)",
+      "Bash(./plugins/app-maker/skills/app-maker/scripts/flow-validate.sh)",
+      "Bash(./plugins/app-maker/skills/app-maker/scripts/make-preview-qr.sh *)"
     ]
   }
 }

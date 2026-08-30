@@ -20,8 +20,34 @@
       "license": "MIT",
       "category": "mobile-development",
       "source": "./plugins/app-maker",
-      "keywords": ["expo", "react-native", "mobile", "ios", "android", "non-technical", "app-builder", "no-code", "claude-code", "claude-code-plugin", "claude-skill", "build-an-app", "make-an-app", "app-maker"],
-      "tags": ["mobile-development", "no-code", "expo", "app-builder"]
+      "keywords": [
+        "expo",
+        "expo-go",
+        "eas-build",
+        "react-native",
+        "mobile",
+        "ios",
+        "android",
+        "cross-platform",
+        "no-code",
+        "non-technical",
+        "vibe-coding",
+        "ai-agents",
+        "app-builder",
+        "build-an-app",
+        "make-an-app",
+        "app-maker",
+        "claude-code",
+        "claude-code-plugin",
+        "claude-skill",
+        "developer-tools"
+      ],
+      "tags": [
+        "mobile-development",
+        "no-code",
+        "expo",
+        "app-builder"
+      ]
     }
   ]
 }

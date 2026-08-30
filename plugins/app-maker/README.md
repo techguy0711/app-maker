@@ -1,4 +1,4 @@
-# app-maker
+# 📱 App Maker
 
 [![Codex Plugin](https://img.shields.io/badge/Codex-plugin-111827)](https://developers.openai.com/codex/)
 
@@ -44,14 +44,14 @@ decisions the user didn't ask to make.
 ## Installation — Claude Code
 
 ```
-/plugin marketplace add <this-repo's-git-url-or-local-path>
+/plugin marketplace add techguy0711/app-maker
 /plugin install app-maker@app-maker
 ```
 
 ## Installation — Codex
 
 ```bash
-codex plugin marketplace add <this-repo's-git-url-or-local-path>
+codex plugin marketplace add techguy0711/app-maker
 codex plugin add app-maker@app-maker
 ```
 

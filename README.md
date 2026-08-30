@@ -148,7 +148,11 @@ each phase is its own file so an agent loads only the one it's in.
 
 ### The parts that exist because something broke
 
-Nearly every guard here is a postmortem. The specifics live in
+Nearly every guard here is a postmortem. Six of them are written up in
+[**Six ways an agent building mobile apps fails**](docs/six-ways-agents-fail-building-mobile-apps.md)
+— the SDK the store hasn't shipped yet, the QR code that structurally cannot
+print, the git check that nearly committed someone's Documents folder. The full
+set, with reproductions, is in
 [`troubleshooting.md`](plugins/app-maker/skills/app-maker/references/troubleshooting.md).
 
 **Expo Go pins exactly one SDK version.** `create-expo-app@latest` always

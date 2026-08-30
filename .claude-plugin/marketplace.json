@@ -9,6 +9,7 @@
   "plugins": [
     {
       "name": "app-maker",
+      "displayName": "App Maker",
       "description": "Say 'build me an app' or describe your idea and Claude builds a real iOS/Android app end-to-end — no coding required — from idea to something running live on your own phone to an App Store/Play Store release, with all developer-tooling setup handled automatically.",
       "author": {
         "name": "Kristhian De Oliveira",
@@ -18,7 +19,7 @@
       "homepage": "https://github.com/techguy0711/app-maker",
       "repository": "https://github.com/techguy0711/app-maker",
       "license": "MIT",
-      "category": "mobile-development",
+      "category": "development",
       "source": "./plugins/app-maker",
       "keywords": [
         "expo",
